@@ -16,7 +16,7 @@ Already in your skill list - invoke them normally.
 - **skill-catalogue** - Use when a task looks project- or domain-specific and no listed skill covers it - Android/Compose/Kotlin/KSP/Room/Gradle, Monarch, AntHill/antfarm/lore, AetherCore, gamecore, handball, load testing...
 - **skillify** - Turn something you just did into a reusable skill and register it in the resolver. Use when the user says "skillify this", "make that a skill", or after completing a non-trivial procedure worth rep...
 
-## On demand (catalogue tier, 109)
+## On demand (catalogue tier, 108)
 
 Project- and domain-specific. Not in your skill list. When one matches the task,
 read its path below and follow it as you would any skill.
@@ -103,8 +103,6 @@ read its path below and follow it as you would any skill.
   `C:/Users/alex.mollard/.omp/agent/managed-skills/aspire-lan-docker-recovery/SKILL.md`
 - **aspire-lan-exposure** — Expose or repair LAN access to an Aspire stack's containerized endpoints (Caddy/proxy, Valkey/Redis) when other machines get connection refused, or after a Docker/WSL restart breaks it
   `C:/Users/alex.mollard/.omp/agent/managed-skills/aspire-lan-exposure/SKILL.md`
-- **codebase-memory** — Use the codebase knowledge graph for structural code queries. Triggers on: explore the codebase, understand the architecture, what functions exist, show me the structure, who calls this function, w...
-  `C:/Users/alex.mollard/.omp/agent/managed-skills/codebase-memory/SKILL.md`
 - **compose-accessibility-sweep** — Prove a Jetpack Compose app is announceable and hittable with an instrumented semantics sweep — covers the sibling-placeholder BasicTextField that announces nothing, the two-tier size floor (WCAG 2...
   `C:/Users/alex.mollard/.omp/agent/managed-skills/compose-accessibility-sweep/SKILL.md`
 - **compose-control-tap-verification** — Prove a Jetpack Compose control (like button, toggle, chip) actually fires on a real device by targeting it through the accessibility hierarchy instead of guessed coordinates, and confirming the ef...

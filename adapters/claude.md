@@ -5,6 +5,5 @@
 - `/graphify` → invoke the `Skill` tool with `skill: "graphify"` before anything else.
 - Commands (`/pressure-test`, `/sidenote`, `/squash`) live in `~/.claude/commands/`.
 - Memory: file-based, one fact per file, under the session's memory directory.
-  Index each new memory with one line in `MEMORY.md`. The `mind` MCP protocol
-  does not apply here.
+  Index each new memory with one line in `MEMORY.md`.
 - Subagents: use the `Agent` tool per section 8.

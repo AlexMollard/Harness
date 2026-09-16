@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json",
+  "mcpServers": {
+    "codebase-memory-mcp": {
+      "command": "C:/Users/alex.mollard/AppData/Local/Programs/codebase-memory-mcp/codebase-memory-mcp.exe"
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}
