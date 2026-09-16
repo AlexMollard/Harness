@@ -1,1 +1,4 @@
 False
+
+# Codex installs its own system skills into the shared pool; it owns these.
+skills/global/.system/
