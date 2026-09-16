@@ -1,26 +1,5 @@
 # Code discovery
 
-## Knowledge graph first (codebase-memory-mcp)
-
-Prefer MCP graph tools over grep/glob/file-search for any structural code question
-(callers, call chains, architecture, impact analysis). If a project is not indexed
-yet, run `index_repository` first.
-
-1. `search_graph` — find functions, classes, routes, variables by pattern
-2. `trace_path` — trace who calls a function or what it calls
-3. `get_code_snippet` — read specific function/class source
-4. `query_graph` — Cypher queries for complex patterns
-5. `get_architecture` — high-level project summary
-
-Examples:
-- Find a handler: `search_graph(name_pattern=".*OrderHandler.*")`
-- Who calls it: `trace_path(function_name="OrderHandler", direction="inbound")`
-- Read source: `get_code_snippet(qualified_name="pkg/orders.OrderHandler")`
-
-Fall back to grep/glob for string literals, error messages, config values,
-non-code files (Dockerfiles, shell scripts, configs), and when graph tools
-return insufficient results. Always read a file before editing it.
-
 ## graphify
 
 How to use `graphify` when a project already has a graph. Invoking it is handled
