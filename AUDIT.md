@@ -308,3 +308,82 @@ demonstrated problem.
    current usage is already within what providers recommend.
 5. **Prefer concrete over abstract** where a rule can be made verifiable — this is
    the one thing both Anthropic's docs and the measured checklist result agree on.
+
+---
+
+# Token-spend audit — 2026-09-16
+
+Separate from the instruction audit above. Measured from 443 Claude Code session
+transcripts and 269 omp sessions over 60 days, summing `input_tokens +
+cache_read_input_tokens + cache_creation_input_tokens` per request.
+
+## Spend is concentrated in a handful of sessions
+
+Claude Code, **81.70B input tokens** over 60 days:
+
+| Peak context | Sessions | Share of spend |
+|---|---:|---:|
+| under 194k | 329 | **1.4%** |
+| 194k - 750k | 79 | 6.7% |
+| 750k - 970k | 7 | 9.0% |
+| **over 970k** | **28** | **83.0%** |
+
+**6% of sessions are 83% of the tokens.** Median session peaks at 108k; p95 at 993k.
+
+The cause: every turn re-sends the whole context, and `opus[1m]` puts auto-compact
+at 97% of a 1M window (~970k) instead of ~194k. Context never resets, so per-turn
+cost climbs for the whole session.
+
+## Fix applied
+
+| Harness | Setting | Value |
+|---|---|---|
+| Claude Code | `autoCompactWindow` (settings.json) | `500000` |
+| omp | `compaction.thresholdTokens` | `500000` |
+
+Both take a **token count**, confirmed against the Claude Code binary rather than
+docs: the CLI describes the resolved window as "in tokens", and actual firing is
+`effective_window minus the summary buffer` (~33k), so ~467k.
+
+## Modelled saving
+
+First-order: a session capped at C costs roughly `C/peak` of what it cost running
+to peak. Ignores the cost of extra compaction summaries, so expect somewhat less.
+
+| Cap | Claude Code saved | % |
+|---|---:|---:|
+| 750k | 18.05B | 22.1% |
+| 600k | 29.78B | 36.5% |
+| **500k** | **37.74B** | **46.2%** |
+| 400k | 45.93B | 56.2% |
+
+omp: 2.24B saved (47.4% of its 4.74B). **Combined ~40B of ~86B, about 46%.**
+
+omp is only 5.8% of Claude Code's token volume — median peak 56k, and just 1.5% of
+its sessions exceed 500k. The Claude Code change is where the money is.
+
+## Trap avoided
+
+omp has `extendedContext: false` - *"Use larger context windows where supported; may
+incur premium pricing."* That reads as a 200k cap, which would make a 500k threshold
+**never fire** - worse than leaving it alone. Its own data disproved it: p99 peak
+850k, max 1,408k. Verify the window before setting a threshold against it.
+
+## Re-run these
+
+```bash
+# Claude Code: peak context and spend per session
+find ~/.claude/projects -name '*.jsonl' -mtime -60
+# sum input_tokens + cache_read_input_tokens + cache_creation_input_tokens per request
+
+# omp: same, from "usage":{"input":N,...,"cacheRead":N,"cacheWrite":N}
+find ~/.omp/agent/sessions -name '*.jsonl' -not -name '__advisor*'
+
+# which MCP servers actually get called
+grep -rhoE '"name":"mcp__[^"]+"' ~/.claude/projects --include='*.jsonl'
+grep -rhoE '\{"type":"toolCall","id":"[^"]*","name":"[^"]+"' ~/.omp/agent/sessions
+```
+
+Config is *not* evidence of use. omp had two MCP servers configured and made zero
+MCP calls in 24,088 tool calls; Claude Code's two servers drew 17 calls in 60 days
+against 9,615 for the built-in browser.
