@@ -43,7 +43,7 @@ session cheaper. I should not have implied otherwise.
 
 This is the documented consequence of Defects 1 and 2 below — they aren't cosmetic.
 
-## Defect 1 — contradictory shortcut marker (real conflict)
+## Defect 1 — contradictory shortcut marker — FIXED 2026-09-16
 
 Two different literal comment prefixes are mandated for the same practice:
 
@@ -53,7 +53,7 @@ Two different literal comment prefixes are mandated for the same practice:
 Same example sentence, different prefix. Unsatisfiable as a pair, and grepping for
 deliberate shortcuts later finds only half of them.
 
-## Defect 2 — contradictory ambiguity rule (real conflict)
+## Defect 2 — contradictory ambiguity rule — FIXED 2026-09-16
 
 - `core/20-principles.md:13` — "If multiple interpretations exist, present them -
   don't pick silently."
@@ -63,7 +63,7 @@ deliberate shortcuts later finds only half of them.
 Opposite instructions at the exact moment of ambiguity. Gate 1's version is the
 better rule and should win.
 
-## Defect 3 — the Gatekeeper largely restates the principles
+## Defect 3 — the Gatekeeper largely restates the principles — OPEN
 
 `30-gatekeeper.md` (1,282 tokens) is mostly a second pass over `20-principles.md`:
 
@@ -129,3 +129,12 @@ resolve outside the working directory. This session (desktop Code tab) *did* exp
 `@RTK.md` from `~/.claude/`, which is outside the scratch working directory — strong
 evidence the Code tab is unaffected. Confirm directly by running `/context` in a new
 desktop session and checking that the `agent-core` files appear under **Memory files**.
+
+## Status
+
+Defects 1 and 2 fixed 2026-09-16: one `// shortcut:` marker, and section 1 now
+defers to Gate 1 on when to ask versus default.
+
+Defect 3 (the ~1,300-token Gatekeeper/principles overlap) is left OPEN. It is a
+judgement rewrite of your own rules, not a mechanical fix, and is the single
+biggest lever on the 394-line total.

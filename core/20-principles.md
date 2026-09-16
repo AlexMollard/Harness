@@ -10,7 +10,8 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 
 Before implementing:
 - State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
+- If multiple interpretations exist, say which one you're taking and why. Ask only
+  when the readings lead to materially different work (see Gate 1).
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
 - **Have a recommendation.** Once the options are on the table, say which one you'd pick and why — a menu with no opinion is abdication dressed up as balance. *Ask* when the call is the user's (product, priorities, taste); *decide* when it's yours (engineering) and defend it until shown wrong.

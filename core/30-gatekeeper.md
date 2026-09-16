@@ -66,9 +66,9 @@ Rules while building:
   function you're about to touch; fix once where they all route through.
   The lazy fix IS the root-cause fix — one guard in the shared function
   beats a guard in every caller.
-- Mark deliberate shortcuts with their ceiling and upgrade trigger:
-  `// ponytail: global lock; per-account locks if throughput matters`.
-  A named ceiling can be revisited; an unmarked one rots.
+- Mark deliberate shortcuts with their ceiling and upgrade trigger, using the
+  `// shortcut:` marker from section 5. A named ceiling can be revisited; an
+  unmarked one rots.
 
 Never simplify away: validation at trust boundaries, error handling that
 prevents data loss, security, accessibility, anything the agreement
