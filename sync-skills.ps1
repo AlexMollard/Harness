@@ -65,11 +65,20 @@ if ($Unlink) {
     $d = $l.Path; $bak = "$d.preunify"
     $item = Get-Item $d -Force -EA SilentlyContinue
     if (-not ($item -and $item.LinkType)) { Write-Host "  = $($l.Label) not linked" -ForegroundColor DarkGray; continue }
-    if ($WhatIf) { Write-Host "  would unlink $($l.Label) and restore $bak" -ForegroundColor Yellow; continue }
+    $how = if (Test-Path $bak) { "restore $bak" } else { 'copy the pool contents back' }
+    if ($WhatIf) { Write-Host "  would unlink $($l.Label) and $how" -ForegroundColor Yellow; continue }
     # removes the junction only - the target pool is untouched
     [System.IO.Directory]::Delete($d, $false)
-    if (Test-Path $bak) { Move-Item $bak $d }
-    Write-Host "  restored $($l.Label)" -ForegroundColor Green
+    if (Test-Path $bak) {
+      Move-Item $bak $d
+      Write-Host "  restored $($l.Label) from $(Split-Path -Leaf $bak)" -ForegroundColor Green
+    }
+    else {
+      # no pre-unification snapshot kept: leave a real, populated directory rather
+      # than nothing, by copying the pool out of the link
+      Copy-Item -Recurse -Force $l.Pool $d
+      Write-Host "  unlinked $($l.Label), copied pool contents into a real dir" -ForegroundColor Green
+    }
   }
   return
 }
@@ -196,11 +205,28 @@ foreach ($l in $Links) {
   $item = Get-Item $d -Force -EA SilentlyContinue
   if ($item -and $item.LinkType) { Write-Host "  = $($l.Label) already linked" -ForegroundColor DarkGray; continue }
   if (Test-Path $bak) { Write-Host "  ! $bak already exists - resolve by hand" -ForegroundColor Red; continue }
-  if ($WhatIf) { Write-Host "  would move $d -> $bak, then junction at $($l.Pool)" -ForegroundColor Yellow; continue }
-  if (Test-Path $d) { Move-Item $d $bak }        # renamed aside, never deleted
+
+  # If the dir is already byte-identical to the pool there is nothing to preserve,
+  # so skip the backup rather than leaving a redundant .preunify behind. Content is
+  # compared by hash; anything unique means we fall back to renaming aside.
+  $redundant = $false
+  if (Test-Path $d) {
+    $hash = { param($p) (Get-ChildItem $p -Recurse -File | Sort-Object { $_.FullName.Substring($p.Length) } |
+        ForEach-Object { (Get-FileHash $_ -Algorithm MD5).Hash }) -join ',' }
+    $redundant = (& $hash $d) -eq (& $hash $l.Pool)
+  }
+  if ($WhatIf) {
+    $what = if ($redundant) { 'replace (identical to pool, no backup needed)' } else { "move -> $bak, then" }
+    Write-Host "  would $what junction $d at $($l.Pool)" -ForegroundColor Yellow; continue
+  }
+  if (Test-Path $d) {
+    if ($redundant) { [System.IO.Directory]::Delete($d, $true) }   # proven identical to the pool
+    else { Move-Item $d $bak }                                     # unique content: renamed aside, never deleted
+  }
   # junction, not symlink: works without admin or Developer Mode on Windows
   New-Item -ItemType Junction -Path $d -Target $l.Pool | Out-Null
-  Write-Host "  + $($l.Label) -> pool (previous set kept at $(Split-Path -Leaf $bak))" -ForegroundColor Green
+  $note = if ($redundant) { 'was identical, nothing to keep' } else { "previous set kept at $(Split-Path -Leaf $bak)" }
+  Write-Host "  + $($l.Label) -> pool ($note)" -ForegroundColor Green
 }
 
 Write-Host "done." -ForegroundColor Cyan
