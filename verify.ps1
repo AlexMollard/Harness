@@ -12,7 +12,7 @@
 [CmdletBinding()]
 param(
   [switch]$Static,
-  [ValidateSet('claude', 'omp', 'codex', 'opencode')]
+  [ValidateSet('claude', 'omp', 'opencode')]
   [string[]]$Only
 )
 
@@ -56,30 +56,18 @@ function Test-Live {
   return $true
 }
 
-# Codex is not a default target: it is not in active use, and its CLI currently
-# rejects every model ("not supported when using Codex with a ChatGPT account"),
-# so probing it would fail the run for a reason unrelated to agent-core. Its
-# AGENTS.md is still generated and kept current by build.ps1.
-# Check it explicitly with:  ./verify.ps1 -Only codex
 $targets = if ($Only) { $Only } else { @('claude', 'omp', 'opencode') }
 Write-Host "agent-core verify" -ForegroundColor Cyan
 
 Write-Host "static wiring:"
 if ('claude'   -in $targets) { if (-not (Test-Static 'claude  ' "$HOME/.claude/CLAUDE.md"                  'agent-core/core')) { $fail++ } }
 if ('omp'      -in $targets) { if (-not (Test-Static 'omp     ' "$HOME/.omp/agent/AGENTS.md"               'agent-core/core')) { $fail++ } }
-if ('codex'    -in $targets) { if (-not (Test-Static 'codex   ' "$HOME/.codex/AGENTS.md"                   'Gate 2'))          { $fail++ } }
 if ('opencode' -in $targets) { if (-not (Test-Static 'opencode' "$HOME/.config/opencode/opencode.jsonc"    'agent-core'))      { $fail++ } }
 
 if (-not $Static) {
   Write-Host "live load (calls each harness once):"
-  $codex = Get-ChildItem "$HOME/AppData/Local/OpenAI/Codex/bin/*/codex.exe" -EA SilentlyContinue |
-  Sort-Object LastWriteTime -Desc | Select-Object -First 1
-
   if ('claude' -in $targets) { if (-not (Test-Live 'claude  ' { claude -p --model haiku $Probe })) { $fail++ } }
   if ('omp'    -in $targets) { if (-not (Test-Live 'omp     ' { omp -p $Probe })) { $fail++ } }
-  if ('codex'  -in $targets -and $codex) {
-    if (-not (Test-Live 'codex   ' { & $codex.FullName exec --skip-git-repo-check -C $HOME $Probe })) { $fail++ }
-  }
   if ('opencode' -in $targets) { if (-not (Test-Live 'opencode' { opencode run $Probe })) { $fail++ } }
 }
 

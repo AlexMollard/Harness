@@ -41,8 +41,8 @@ $GlobalSkills = @{
   'handoffplan'      = "$HOME/.claude/skills/handoffplan"
   'skillify'         = "$HOME/.claude/skills/skillify"
   'mind-management'  = "$HOME/.config/opencode/skills/mind-management"
-  'pressure-test'    = "$HOME/.codex/skills/pressure-test"
-  'sidenote'         = "$HOME/.codex/skills/sidenote"
+  'pressure-test'    = "$Root/skills/global/pressure-test"
+  'sidenote'         = "$Root/skills/global/sidenote"
 }
 
 # Slash commands are pooled the same way: union of what each harness had today.
@@ -53,7 +53,6 @@ $CmdSources = @("$HOME/.claude/commands", "$HOME/.config/opencode/commands")
 # one loop without colliding on harness name.
 $Links = @(
   [pscustomobject]@{ Label = 'claude skills'; Path = "$HOME/.claude/skills"; Pool = $Pool }
-  [pscustomobject]@{ Label = 'codex skills'; Path = "$HOME/.codex/skills"; Pool = $Pool }
   [pscustomobject]@{ Label = 'opencode skills'; Path = "$HOME/.config/opencode/skills"; Pool = $Pool }
   [pscustomobject]@{ Label = 'claude commands'; Path = "$HOME/.claude/commands"; Pool = $CmdPool }
   [pscustomobject]@{ Label = 'opencode commands'; Path = "$HOME/.config/opencode/commands"; Pool = $CmdPool }
