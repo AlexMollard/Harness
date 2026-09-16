@@ -138,3 +138,45 @@ defers to Gate 1 on when to ask versus default.
 Defect 3 (the ~1,300-token Gatekeeper/principles overlap) is left OPEN. It is a
 judgement rewrite of your own rules, not a mechanical fix, and is the single
 biggest lever on the 394-line total.
+
+## Evidence on instruction length (arXiv, 2026)
+
+All preprints, no stated peer-review venue — weigh accordingly. Verified via the
+arXiv API; titles and IDs confirmed.
+
+**Detailed, specific instructions measurably help.** This cuts *against* blanket
+trimming:
+
+- Coding-agent audit task: a detailed external checklist beat a generic self-check
+  **10/10 vs 5/10 runs** (p=0.0325). <https://arxiv.org/abs/2607.17937>
+- Replacing detailed specialist system prompts with a minimal generic one dropped
+  semantic accuracy **0.67 → 0.58**. <https://arxiv.org/abs/2601.06640>
+
+**But verbosity costs real work.** This is the same shape as the InfoQ finding:
+
+- Augmenting MCP tool descriptions raised task success by a median **+5.85pp** yet
+  increased execution steps **+67.46%** and *regressed* 16.67% of cases. The authors
+  note "compact variants often preserve behavioral reliability while reducing
+  unnecessary token overhead." <https://arxiv.org/abs/2602.14878>
+
+**Position still matters in 2026.** Middle-of-context degradation persisted across
+all tested models, from **-16pp to -56pp** depending on filler.
+<https://arxiv.org/abs/2605.23170>
+
+**Long context degrades coding agents — but the headline result is weak.** 8/10
+passes at ~11k chars vs 3/10 at ~299k chars, **p=0.0698: a trend, not statistically
+significant**, n=10 per arm. Do not treat as established.
+<https://arxiv.org/abs/2607.17937>
+
+No clean replication of Chroma's original context-rot protocol was found.
+
+### What this changes
+
+The recommendation is **not** "cut instructions." Specificity earns its tokens;
+duplication and prose do not. So:
+
+- **Keep** concrete, verifiable rules — they measurably improve adherence.
+- **Cut** the Defect 3 duplication (~1,300 tokens saying the same thing twice) and
+  the 8 sentences over 40 words, which add length without adding a rule.
+- **Expect** that every rule retained will be followed indiscriminately, adding
+  steps. That is the real price of the 394 lines, more than the tokens.
