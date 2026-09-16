@@ -180,3 +180,115 @@ duplication and prose do not. So:
   the 8 sentences over 40 words, which add length without adding a rule.
 - **Expect** that every rule retained will be followed indiscriminately, adding
   steps. That is the real price of the 394 lines, more than the tokens.
+
+## Evidence on rule COUNT (the strongest measured result)
+
+Your core files contain **109 discrete directives** (93 bullets + 16 bolded
+standalone rules). That number is what the following bears on.
+
+### The decay curve
+
+"Phase Transitions in Compositional Constraint Satisfaction" — 15 models, 8 families,
+369,753 constraint checks, deterministic verifiers, temperature 0.
+<https://arxiv.org/abs/2608.12426>
+*Caveat: single author, "reviewed in the ARR May 2026 cycle", acceptance not stated.
+It carries the strongest number here, so weigh accordingly.*
+
+- Per-constraint pass rate decays as **72.0% x 0.922^(k-1)** — each added constraint
+  drops the average per-constraint pass rate to 92.2% of the previous level
+  (held-out MAE 0.2pp).
+- Joint ("all k satisfied") success collapses as roughly the **product** of the
+  marginals: "at k = 8, models still pass individual constraints 40.7% of the time
+  yet satisfy all eight simultaneously only 5.7% of the time (35pp gap)."
+- "Reliable instruction following breaks down beyond **5-6** simultaneous constraints."
+  Per-model ceilings: GPT-5.5 k*=7, Claude 4.7 Opus k*=6, most others 3 or fewer.
+- **Structural and ordering constraints degrade 2.0x faster than lexical ones.**
+- Mitigations mostly fail: "pre-generation planning does not move the threshold at
+  all"; self-correction and best-of-5 delay it by one to two constraints.
+
+Corroborated by ManyIFEval (<https://arxiv.org/abs/2509.21051>): Claude 3.5 Sonnet
+all-instructions-satisfied falls **0.95 at n=1 to 0.48 at n=10**; GPT-4o 0.94 to 0.21.
+
+### The reconciliation that stops this being alarmist
+
+IFScale and Arize's 2026 rerun show frontier models tracking **thousands** of
+instructions (GPT-5.5 at 99% through N=5,000).
+<https://arxiv.org/abs/2507.11538> · <https://arize.com/blog/llm-instruction-following-benchmark-2026/>
+
+Both are right, because they measure different things:
+
+- **Additive, independently-checkable, no-state-required rules** ("include X",
+  "never say Y"): scale to thousands. This is keyword inclusion — exactly the class
+  the decay paper finds compositionally immune.
+- **Rules requiring sustained state across the output, all of which must hold at
+  once** (counts, ordering, structure, cross-references): **5-6**.
+
+### Honest limit on transferring this to your files
+
+**None of this measures judgment-shaped behavioural rules** — "be surgical", "disagree
+out loud", "have a recommendation". Every measured result above uses mechanically
+verifiable output constraints *by explicit design*; the decay paper rejected
+candidates like "maintain formal tone throughout" for needing stylistic judgment.
+
+This is the single biggest gap between the literature and real system-prompt
+engineering, and nothing found closes it. Your 109 directives are also mostly
+*conditional* (apply when the situation arises) rather than *simultaneous* (all must
+hold in every output), so the 5-6 figure does **not** transfer directly. Treat the
+direction as supported and the magnitude as unmeasured.
+
+## Conflicting rules fail SILENTLY
+
+ConInstruct, AAAI 2026. <https://arxiv.org/abs/2511.14342>
+
+- Models *detect* conflicts well: DeepSeek-R1 F1 **91.5%**, Claude-4.5-Sonnet **87.3%**.
+- They then say nothing: "when an instruction contains 1-2 conflicts, GPT-4o will
+  directly generate a response in **97.5%** of cases, satisfying only a subset of the
+  constraints but failing to notify the user of the conflicts."
+- Best case: "Claude-4.5-Sonnet explicitly alerts users to conflicts in only **45%**
+  of cases."
+
+**This is why Defects 1 and 2 mattered.** A contradiction is not surfaced as an
+error — it is silently resolved in a direction you never chose and never see.
+
+## Two pieces of folklore that did NOT survive checking
+
+**"Put critical rules at the top or they get ignored" — unsupported.**
+The only study that directly tested rule position among peer instructions found
+**no effect**: "we found no consistent relationship between IF rates and instruction
+position across models. Middle instructions generally did not have lower IF rates
+than first or last instructions." It attributes degradation to *conflict*, not
+position. <https://arxiv.org/abs/2510.14842> (section 4.2)
+
+The widely repeated "buried rules lose 30-50% compliance" figure has **no primary
+source** — it traces back to Liu et al.'s *document-retrieval* result re-skinned as
+rule compliance. What does measurably matter is the **channel** (system vs user vs
+tool description) and constraint *difficulty ordering*, not depth.
+
+**Emphatic markup ("IMPORTANT", "MUST", ALL CAPS) — no provider recommends it.**
+All three argue against it, none cite evidence either way. Anthropic, verbatim:
+"Where you might have said 'CRITICAL: You MUST use this tool when...', you can use
+more normal prompting like 'Use this tool when...'."
+<https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices>
+The only legible uppercase experiment found a null (87.7% vs 87.1%). Your files
+already follow this — 10 emphatic terms across 171 lines is restrained.
+
+**Negative framing ("don't do X") — effectively a null.** Anthropic's
+"tell Claude what to do instead of what not to do" is asserted about *output
+formatting* specifically, with no experiment cited. IFEval and IFBench never contrast
+the two framings. One unrefereed 2026 preprint suggests prohibitions decay under
+context pressure while requirements persist; unreplicated, no affiliation.
+<https://arxiv.org/abs/2604.20911> Your 38 negative constructions are not a
+demonstrated problem.
+
+## What the evidence actually supports doing
+
+1. **Fix contradictions first.** Highest-confidence, already done for Defects 1-2.
+   Conflict is the one mechanism with both a measured effect on following *and*
+   a measured failure to report itself.
+2. **Cut duplication, not rules.** Defect 3's ~1,300 tokens add zero new constraints
+   while adding length. Pure win.
+3. **Do not reorder to "put important rules first."** Unsupported by the one direct test.
+4. **Do not strip emphasis or rewrite negatives.** No evidence of benefit; your
+   current usage is already within what providers recommend.
+5. **Prefer concrete over abstract** where a rule can be made verifiable — this is
+   the one thing both Anthropic's docs and the measured checklist result agree on.
