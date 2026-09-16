@@ -1,0 +1,49 @@
+#!/bin/bash
+# SessionStart hook: Headroom Startup Guardian.
+# Claude Code port of omp's extensions/headroom-startup.ts. Starts the local
+# optimization proxy on :8787 if it is not already live, so the
+# ANTHROPIC_BASE_URL in settings.json has something to talk to.
+#
+# Two routes, one daemon: --anthropic-api-url serves Claude Code (Anthropic
+# models), --openai-api-url keeps serving omp's Z.AI traffic. The omp extension
+# omits the Anthropic flag, whose upstream then defaults to api.anthropic.com
+# anyway - but relying on a default that decides where credentials go is not
+# something to leave implicit, so it is pinned explicitly here.
+#
+#
+# Fail-open: any error leaves the session alone. Never blocks, never errors out.
+set +e
+
+PORT=8787
+LIVEZ="http://127.0.0.1:${PORT}/livez"
+HEADROOM="C:/Users/alex.mollard/.local/bin/headroom.exe"
+ANTHROPIC_UPSTREAM="https://api.anthropic.com"
+ZAI_OPENAI="https://api.z.ai/api/coding/paas/v4"
+
+live() { curl -fsS -m 2 -o /dev/null "$LIVEZ" 2>/dev/null; }
+
+live && exit 0
+[ -x "$HEADROOM" ] || exit 0
+
+HEADROOM_ROLLOUT_CHANNEL=beta \
+HEADROOM_OUTPUT_SHAPER=1 \
+nohup "$HEADROOM" proxy \
+  --port "$PORT" \
+  --memory \
+  --code-aware \
+  --anthropic-api-url "$ANTHROPIC_UPSTREAM" \
+  --openai-api-url "$ZAI_OPENAI" \
+  --provider-name "Z.AI" \
+  >/dev/null 2>&1 &
+disown 2>/dev/null
+
+# Bounded wait: ANTHROPIC_BASE_URL points here, so handing the session a dead
+# proxy breaks Claude Code outright. Cold start is ~40s (lazy embedding models);
+# cap the block at 60s and fail open rather than hang the session forever.
+# Measured cold start on this box: ~31s. The proxy is a daemon that outlives
+# sessions, so this cost is paid once, not per session.
+for _ in $(seq 1 60); do
+  live && exit 0
+  sleep 1
+done
+exit 0

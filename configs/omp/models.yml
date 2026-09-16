@@ -1,0 +1,105 @@
+providers:
+  gpustack:
+    baseUrl: https://baai.ba.bigant-internal.com/v1-openai
+    apiKey: GPUSTACK_API_KEY
+    api: openai-completions
+    authHeader: true
+    discovery:
+      type: openai-models-list
+      injectV1: false
+    modelOverrides:
+      qwen3.8-27b-nvfp4:
+        name: Qwen3.8 27B NVFP4 (GPUStack)
+        contextWindow: 262144
+        maxTokens: 32768
+        reasoning: true
+        input: [text, image]
+        supportsTools: true
+        tokenizer: qwen3
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        thinking:
+          mode: effort
+          efforts: [minimal, low, medium, high]
+          defaultLevel: low
+          requiresEffort: false
+        compat:
+          thinkingFormat: qwen-chat-template
+          reasoningContentField: reasoning
+      qwen3-4b-awq:
+        name: Qwen3 4B AWQ (GPUStack)
+        contextWindow: 262144
+        maxTokens: 32768
+        reasoning: true
+        supportsTools: true
+        tokenizer: qwen3
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        thinking:
+          mode: effort
+          efforts: [minimal, low, medium, high]
+          defaultLevel: low
+          requiresEffort: false
+        compat:
+          thinkingFormat: qwen-chat-template
+          reasoningContentField: reasoning
+  google-antigravity:
+    baseUrl: http://127.0.0.1:8787
+
+
+  zai-headroom:
+    baseUrl: http://127.0.0.1:8787
+    apiKey: ZAI_HEADROOM_API_KEY
+    api: openai-completions
+    authHeader: true
+    headers:
+      x-headroom-base-url: https://api.z.ai/api/coding/paas/v4
+      x-headroom-original-path: /chat/completions
+    models:
+      - id: glm-5.3-flash
+        name: GLM-5.3-Flash (Headroom)
+        api: openai-completions
+        baseUrl: http://127.0.0.1:8787
+        reasoning: true
+        input: [text, image]
+        cost: {input: 0.15, output: 0.5, cacheRead: 0.03, cacheWrite: 0}
+        contextWindow: 1000000
+        maxTokens: 131072
+        tokenizer: glm5
+        thinking:
+          mode: anthropic-budget-effort
+          efforts: [low, high, max]
+          defaultLevel: max
+          requiresEffort: true
+        compat:
+          supportsStore: false
+          supportsDeveloperRole: false
+          supportsMultipleSystemMessages: true
+          supportsReasoningEffort: true
+          supportsReasoningParams: true
+          reasoningEffortMap: {}
+          maxTokensField: max_tokens
+          supportsUsageInStreaming: true
+          requiresToolResultName: false
+          requiresMistralToolIds: false
+          requiresAssistantAfterToolResult: false
+          requiresThinkingAsText: false
+          reasoningContentField: reasoning_content
+          requiresReasoningContentForToolCalls: false
+          allowsSyntheticReasoningContentForToolCalls: true
+          requiresAssistantContentForToolCalls: false
+          supportsToolChoice: true
+          supportsForcedToolChoice: true
+          disableReasoningOnForcedToolChoice: false
+          disableReasoningOnToolChoice: false
+          thinkingFormat: zai
+          supportsStrictMode: false
+          streamIdleTimeoutMs: 600000
+          streamMarkupHealingPattern: thinking
+          alwaysSendMaxTokens: false

@@ -87,3 +87,37 @@ that failed to resolve its import answers MISSING. That is the check that catche
 drift returning — run it after every build.
 
 Both harnesses **pass live** at last run.
+
+## Setting up a new machine
+
+```powershell
+git clone https://github.com/AlexMollard/Harness.git ~/agent-core
+cd ~/agent-core
+./install.ps1 -WhatIf      # see exactly what it would touch
+./install.ps1
+```
+
+It runs six gates in order and stops at the first failure rather than leaving a
+half-configured machine: prerequisites on PATH, required env vars, config files,
+omp's managed skills, wiring, then `verify.ps1`. Anything it replaces is kept
+alongside as `<file>.pre-install`.
+
+### Secrets
+
+No key is ever committed. `export-config.ps1` rewrites a literal API key to an
+ALL_CAPS env var name - the convention `models.yml` already used for GPUStack -
+and the export **fails** if anything secret-shaped survives. `install.ps1` refuses
+to run until every named var is set, so a missing key is caught up front instead
+of at runtime.
+
+Currently required: `GPUSTACK_API_KEY`, `ZAI_HEADROOM_API_KEY`.
+
+### Capturing changes from this machine
+
+```powershell
+./export-config.ps1        # then commit configs/ and skills/managed
+```
+
+Re-run it after changing a setting or letting omp's autolearn write new skills.
+Absolute home paths are stored as `__HOME__`, so a different username on the next
+machine does not break the hooks.

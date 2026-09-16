@@ -1,0 +1,85 @@
+providers:
+  webSearchOrder:
+    - anthropic
+    - codex
+    - zai
+    - xai
+    - perplexity
+    - gemini
+    - exa
+    - tinyfish
+    - jina
+    - kagi
+    - tavily
+    - firecrawl
+    - brave
+    - kimi
+    - parallel
+    - synthetic
+    - searxng
+    - startpage
+    - duckduckgo
+    - ecosia
+    - google
+    - mojeek
+    - public
+modelRoles:
+  plan: zai-headroom/glm-5.3-flash:high
+  task: zai-headroom/glm-5.3-flash:low
+  commit: gpustack/qwen3.8-27b-nvfp4:off
+  advisor: zai-headroom/glm-5.3-flash:low
+  tiny: gpustack/qwen3.8-27b-nvfp4:off
+  default: anthropic/claude-opus-5:high
+  smol: zai-headroom/glm-5.3-flash:low
+  slow: anthropic/claude-opus-5:max
+  vision: anthropic/claude-sonnet-5:medium
+  SeriousBuisness: anthropic/claude-fable-5-1:low
+symbolPreset: nerd
+composer:
+  shape: band
+theme:
+  dark: dark-gruvbox
+setupVersion: 2
+enabledModels:
+  []
+skills:
+  enableClaudeUser: true
+  ignoredSkills:
+    - graphify-windows
+commands:
+  enableClaudeUser: true
+memory:
+  backend: sharpshooter
+autolearn:
+  enabled: true
+  autoContinue: true
+read:
+  renderMarkdown: true
+  toolResultPreview: true
+readLineNumbers: true
+bashInterceptor:
+  enabled: true
+todo:
+  eager: preferred
+dev:
+  autoqaConsent: granted
+statusLine:
+  preset: nerd
+  separator: powerline-thin
+  transparent: false
+terminal:
+  showProgress: false
+tui:
+  textSizing: false
+  tight: false
+display:
+  shimmer: classic
+  showTokenUsage: true
+advisor:
+  enabled: true
+  syncBacklog: "3"
+branchSummary:
+  enabled: true
+defaultThinkingLevel: auto
+compaction:
+  thresholdTokens: 500000
