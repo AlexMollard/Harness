@@ -1,0 +1,209 @@
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
+approval_policy = "never"
+approvals_reviewer = "user"
+sandbox_mode = "danger-full-access"
+
+
+notify = [ "C:\\Users\\alex.mollard\\AppData\\Local\\OpenAI\\Codex\\runtimes\\cua_node\\03b1cdac8af3a530\\bin\\node_modules\\@oai\\sky\\bin\\windows\\codex-computer-use.exe", "turn-ended" ]
+
+[marketplaces.openai-bundled]
+last_updated = "2026-07-23T04:59:23Z"
+source_type = "local"
+source = '\\?\C:\Users\alex.mollard\.codex\.tmp\bundled-marketplaces\openai-bundled'
+
+[marketplaces.openai-primary-runtime]
+last_updated = "2026-07-17T00:52:15Z"
+source_type = "local"
+source = '\\?\C:\Users\alex.mollard\.cache\codex-runtimes\codex-primary-runtime\plugins\openai-primary-runtime'
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."pdf@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+[plugins."computer-use@openai-bundled"]
+enabled = true
+
+[plugins."chrome@openai-bundled"]
+enabled = true
+
+[plugins."template-creator@openai-primary-runtime"]
+enabled = true
+
+[plugins."sites@openai-bundled"]
+enabled = true
+
+[plugins."visualize@openai-bundled"]
+enabled = true
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[features]
+js_repl = false
+memories = true
+
+[mcp_servers.node_repl]
+args = []
+command = 'C:\Users\alex.mollard\AppData\Local\OpenAI\Codex\runtimes\cua_node\03b1cdac8af3a530\bin\node_repl.exe'
+startup_timeout_sec = 120
+
+[mcp_servers.node_repl.env]
+NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
+NODE_REPL_NODE_MODULE_DIRS = 'C:\Users\alex.mollard\AppData\Local\OpenAI\Codex\runtimes\cua_node\03b1cdac8af3a530\bin\node_modules'
+NODE_REPL_NODE_PATH = 'C:\Users\alex.mollard\AppData\Local\OpenAI\Codex\runtimes\cua_node\03b1cdac8af3a530\bin\node.exe'
+NODE_REPL_TRUSTED_CODE_PATHS = 'C:\Users\alex.mollard\.codex'
+CODEX_HOME = 'C:\Users\alex.mollard\.codex'
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "583bf903a6cfb9b00a01e1583381ce921c71d7585085c6fa6b805baa0f60230b,7ed52dae165c3bc22b6d24f282e2c1fbc87f6949fbbe037767a7418d8f517f01"
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
+NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
+BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
+BROWSER_USE_CODEX_APP_VERSION = "26.715.52143"
+SKY_CUA_NATIVE_PIPE = "1"
+SKY_CUA_NATIVE_PIPE_DIRECTORY = '\\.\pipe\codex-computer-use-784629eb-264d-442f-b504-e219069f2bcf'
+CODEX_CLI_PATH = 'C:\Users\alex.mollard\AppData\Local\OpenAI\Codex\bin\5dee10576ec7a5b8\codex.exe'
+
+[mcp_servers.headroom]
+command = "headroom"
+args = ["mcp", "serve"]
+
+
+[mcp_servers.mind]
+command = "C:\\Users\\alex.mollard\\.bun\\bin\\bun.exe"
+args = ["run", "C:\\Users\\alex.mollard\\.local\\share\\mind\\src\\mind.ts", "mcp"]
+[mcp_servers.sequential-thinking]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+
+[mcp_servers.ast-grep]
+command = "npx"
+args = ["-y", "ast-grep-mcp"]
+
+[mcp_servers.code-index]
+command = "uvx"
+args = ["code-index-mcp"]
+
+[mcp_servers.ripgrep]
+command = "npx"
+args = ["-y", "ripgrep-mcp"]
+
+[mcp_servers.tracy]
+command = "C:\\Users\\alex.mollard\\.config\\opencode\\mcp-servers\\tracy-mcp.exe"
+args = []
+
+[mcp_servers.vs-mcp]
+command = "npx"
+args = ["-y", "mcp-remote", "http://localhost:3001/sdk/"]
+
+[mcp_servers.clangd-mcp]
+command = "node"
+args = ["C:\\Users\\alex.mollard\\clangd-mcp-server\\dist\\index.js"]
+
+[mcp_servers.github-mcp]
+command = "C:\\Users\\alex.mollard\\.bun\\bin\\github-mcp-server.exe"
+args = ["stdio"]
+[mcp_servers.github-mcp.env]
+GITHUB_PERSONAL_ACCESS_TOKEN = "<REDACTED - rotate this token>"
+
+[mcp_servers.token-optimizer]
+command = "npx"
+args = ["-y", "@cocaxcode/token-optimizer-mcp", "--mcp"]
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+
+[desktop]
+conversationDetailMode = "STEPS_COMMANDS"
+ambient-suggestions-enabled = true
+selected-avatar-id = "fireball"
+keepRemoteControlAwakeWhilePluggedIn = true
+followUpQueueMode = "queue"
+
+[hooks.state]
+
+[hooks.state.'C:\Users\alex.mollard\.codex\hooks.json:pre_tool_use:0:0']
+trusted_hash = "sha256:611801ec2e3d969b804521d5f231f6581b43d6af10a5b6406fab874286644e3b"
+
+[hooks.state.'C:\Users\alex.mollard\.codex\config.toml:session_start:0:0']
+trusted_hash = "sha256:ed997f3f9766959ba56dc2243cd02468d6eadad80d92b7f5a650e6fc0fb0c050"
+
+[windows]
+sandbox = "elevated"
+
+[projects.'d:\aethercore']
+trust_level = "trusted"
+
+[projects.'d:\heapmapper2']
+trust_level = "trusted"
+
+[projects.'g:\handball1\handball1']
+trust_level = "trusted"
+
+[projects.'d:\basync']
+trust_level = "trusted"
+
+[projects.'d:\alexmollard']
+trust_level = "trusted"
+
+[projects.'d:\bigantcrashhandler']
+trust_level = "trusted"
+
+[projects.'c:\users\alex.mollard']
+trust_level = "trusted"
+
+[memories]
+generate_memories = true
+use_memories = true
+
+[shell_environment_policy.set]
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "583bf903a6cfb9b00a01e1583381ce921c71d7585085c6fa6b805baa0f60230b,7ed52dae165c3bc22b6d24f282e2c1fbc87f6949fbbe037767a7418d8f517f01"
+NODE_REPL_TRUSTED_CODE_PATHS = 'C:\Users\alex.mollard\.codex'
+
+[mcp_servers.codebase-memory-mcp]
+command = "C:/Users/alex.mollard/AppData/Local/Programs/codebase-memory-mcp/codebase-memory-mcp.exe"
+
+# >>> codebase-memory-mcp SessionStart >>>
+[[hooks.SessionStart]]
+matcher = "startup|resume|clear|compact"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = 'echo "Code discovery: prefer codebase-memory-mcp (search_graph, trace_path, get_code_snippet, query_graph, search_code) over grep/file-read; run index_repository first if the project is not indexed."'
+# <<< codebase-memory-mcp SessionStart <<<
+
+# --- Local / self-hosted models via GPUStack -------------------------------
+# Additive only: this registers the provider but does NOT change the default
+# model above. Select it per-session with:
+#     codex --model-provider gpustack --model <model-id>
+# or make it the default by setting `model_provider = "gpustack"` at the top.
+#
+# Auth: set GPUSTACK_API_KEY in your environment (setx GPUSTACK_API_KEY "..."),
+# then restart the shell. The key is deliberately NOT stored in this file.
+#
+# wire_api MUST be "responses" — Codex removed `wire_api = "chat"` support
+# (see github.com/openai/codex/discussions/7782). GPUStack does route /v1/responses,
+# but the backing model server has to implement it too; verify per model.
+[model_providers.gpustack]
+name = "GPUStack (BigAnt)"
+base_url = "https://baai.ba.bigant-internal.com/v1"
+env_key = "GPUSTACK_API_KEY"
+wire_api = "responses"
+
+[mcp_servers.aethercore]
+command = "python"
+args = ["D:/AetherCore/tools/mcp/aethercore_mcp.py"]
+
+[mcp_servers.aethercore.env]
+AETHER_CONTROL_PORT = "8787"
+AETHER_REPO = "D:/AetherCore"

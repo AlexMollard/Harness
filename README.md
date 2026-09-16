@@ -1,6 +1,6 @@
 # agent-core
 
-One instruction set, three harnesses: **Claude Code**, **omp**, **opencode**.
+One instruction set, two harnesses: **Claude Code** and **omp**.
 
 Before this, the same "Coding-Agent Guidelines" body existed in three hand-maintained
 copies and had already drifted — Codex was missing section 8 and the entire Gatekeeper,
@@ -31,15 +31,13 @@ we maintain:
 |---|---|---|
 | Claude Code | `@~/agent-core/...` import stub | native imports, verified transitive |
 | omp | `@~/agent-core/...` import stub | native imports, verified 2 hops deep |
-| opencode | `instructions` array in `opencode.jsonc` | config already takes a file list |
 
-Every harness reads `core/` directly through its own native primitive, so **nothing
+Both harnesses read `core/` directly through native `@` imports, so **nothing is generated** - there is no second copy that can drift.
 is generated** - there is no second copy that can drift.
 
-Codex was supported initially and then dropped (it is not in use, and its CLI
-rejects every model on the current auth). `~/.codex/AGENTS.md` was left in place as
-a frozen, unmanaged snapshot; re-adding Codex means restoring the generator from
-git history, since it has no working `@` import.
+Codex and opencode were both supported and then removed (2026-09-16) - along with
+Hermes, they are no longer installed on this machine. Their adapters and the
+mind-memory protocol they used are in git history if ever needed.
 
 ## Skill tiering
 
@@ -88,4 +86,4 @@ ever deletes a file — superseded dirs are renamed to `<dir>.preunify`.
 that failed to resolve its import answers MISSING. That is the check that catches
 drift returning — run it after every build.
 
-All three harnesses **pass live** at last run.
+Both harnesses **pass live** at last run.

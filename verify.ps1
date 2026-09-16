@@ -12,7 +12,7 @@
 [CmdletBinding()]
 param(
   [switch]$Static,
-  [ValidateSet('claude', 'omp', 'opencode')]
+  [ValidateSet('claude', 'omp')]
   [string[]]$Only
 )
 
@@ -56,19 +56,17 @@ function Test-Live {
   return $true
 }
 
-$targets = if ($Only) { $Only } else { @('claude', 'omp', 'opencode') }
+$targets = if ($Only) { $Only } else { @('claude', 'omp') }
 Write-Host "agent-core verify" -ForegroundColor Cyan
 
 Write-Host "static wiring:"
 if ('claude'   -in $targets) { if (-not (Test-Static 'claude  ' "$HOME/.claude/CLAUDE.md"                  'agent-core/core')) { $fail++ } }
 if ('omp'      -in $targets) { if (-not (Test-Static 'omp     ' "$HOME/.omp/agent/AGENTS.md"               'agent-core/core')) { $fail++ } }
-if ('opencode' -in $targets) { if (-not (Test-Static 'opencode' "$HOME/.config/opencode/opencode.jsonc"    'agent-core'))      { $fail++ } }
 
 if (-not $Static) {
   Write-Host "live load (calls each harness once):"
   if ('claude' -in $targets) { if (-not (Test-Live 'claude  ' { claude -p --model haiku $Probe })) { $fail++ } }
   if ('omp'    -in $targets) { if (-not (Test-Live 'omp     ' { omp -p $Probe })) { $fail++ } }
-  if ('opencode' -in $targets) { if (-not (Test-Live 'opencode' { opencode run $Probe })) { $fail++ } }
 }
 
 if ($fail) { Write-Host "$fail check(s) failed" -ForegroundColor Red; exit 1 }

@@ -40,22 +40,19 @@ $GlobalSkills = @{
   'handoff'          = "$HOME/.claude/skills/handoff"
   'handoffplan'      = "$HOME/.claude/skills/handoffplan"
   'skillify'         = "$HOME/.claude/skills/skillify"
-  'mind-management'  = "$HOME/.config/opencode/skills/mind-management"
   'pressure-test'    = "$Root/skills/global/pressure-test"
   'sidenote'         = "$Root/skills/global/sidenote"
 }
 
 # Slash commands are pooled the same way: union of what each harness had today.
 $CmdPool = Join-Path $Root 'commands'
-$CmdSources = @("$HOME/.claude/commands", "$HOME/.config/opencode/commands")
+$CmdSources = @("$HOME/.claude/commands")
 
 # Every dir that becomes a junction, flattened so skills and commands can share
 # one loop without colliding on harness name.
 $Links = @(
   [pscustomobject]@{ Label = 'claude skills'; Path = "$HOME/.claude/skills"; Pool = $Pool }
-  [pscustomobject]@{ Label = 'opencode skills'; Path = "$HOME/.config/opencode/skills"; Pool = $Pool }
   [pscustomobject]@{ Label = 'claude commands'; Path = "$HOME/.claude/commands"; Pool = $CmdPool }
-  [pscustomobject]@{ Label = 'opencode commands'; Path = "$HOME/.config/opencode/commands"; Pool = $CmdPool }
 )
 
 Write-Host "agent-core skills sync" -ForegroundColor Cyan

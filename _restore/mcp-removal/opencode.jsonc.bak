@@ -1,0 +1,231 @@
+{
+  // opencode config — optimized for modern C++ development & debugging
+  // Standard: opencode Aug 2026 schema. Model selection left MANUAL (pick per-session in TUI).
+  "$schema": "https://opencode.ai/config.json",
+
+  // --- Session behaviour -----------------------------------------------------
+  "share": "disabled",        // private engine — never auto-share sessions
+  "autoupdate": "notify",     // get told about updates instead of silent upgrades
+  "snapshot": true,           // keep revertable snapshots of edits
+
+  // Don't let the file watcher churn on build/artifact dirs (huge for C++ builds)
+  "watcher": {
+    "ignore": [
+      "**/build/**",
+      "**/out/**",
+      "**/.cache/**",
+      "**/bin/**",
+      "**/obj/**",
+      "**/*.pdb",
+      "**/*.obj",
+      "**/*.lib",
+      "**/*.o",
+      "**/CMakeFiles/**",
+      "**/vcpkg_installed/**",
+      "**/.vs/**"
+    ]
+  },
+
+  // --- C/C++ language server -------------------------------------------------
+  // Overrides opencode's built-in clangd with engine-grade flags.
+  // Requires compile_commands.json (CMake: -DCMAKE_EXPORT_COMPILE_COMMANDS=ON).
+  "lsp": {
+    "clangd": {
+      "command": [
+        "clangd",
+        "--background-index",
+        "--background-index-priority=normal",
+        "--clang-tidy",
+        "--completion-style=detailed",
+        "--header-insertion=iwyu",
+        "--all-scopes-completion",
+        "--pch-storage=memory",
+        "--function-arg-placeholders",
+        "--limit-results=100",
+        "-j=8"
+      ],
+      "extensions": [
+        ".c", ".cpp", ".cc", ".cxx", ".c++",
+        ".h", ".hpp", ".hh", ".hxx", ".h++",
+        ".inl", ".ipp", ".ixx", ".cppm"
+      ]
+    }
+  },
+
+  // --- Formatter -------------------------------------------------------------
+  // clang-format is built-in and auto-enables when a .clang-format file exists.
+  // This override also covers module/inline extensions the default set skips.
+  "formatter": {
+    "clang-format": {
+      "command": ["clang-format", "-i", "$FILE"],
+      "extensions": [
+        ".c", ".cpp", ".cc", ".cxx", ".c++",
+        ".h", ".hpp", ".hh", ".hxx", ".h++",
+        ".inl", ".ipp", ".ixx", ".cppm"
+      ]
+    }
+  },
+
+  // --- Permissions: HIGH AUTONOMY -------------------------------------------
+  // Reads/edits/builds/tests/git run freely; only destructive ops prompt.
+  // Rules evaluate top-to-bottom, last match wins.
+  "permission": {
+    "read": "allow",
+    "edit": "allow",
+    "webfetch": "allow",
+    "bash": {
+      "*": "allow",
+      "rm *": "ask",
+      "rm -rf *": "ask",
+      "del *": "ask",
+      "rmdir *": "ask",
+      "Remove-Item *": "ask",
+      "git push --force*": "ask",
+      "git push -f*": "ask",
+      "git reset --hard*": "ask",
+      "git clean *": "ask",
+      "git branch -D *": "ask",
+      "git checkout -- *": "ask"
+    }
+  },
+
+  "plugin": [
+    "@tarquinen/opencode-dcp@latest",
+    "@zenobius/opencode-skillful@latest",
+    "opencode-websearch-cited@1.2.0"
+  ],
+
+  // --- MCP servers -----------------------------------------------------------
+  // Secrets pulled from env vars via {env:...} (see setup notes). Set them once
+  // with `setx` and restart the shell before launching opencode.
+  "mcp": {
+    "mind": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\alex.mollard\\.bun\\bin\\bun.exe",
+        "run",
+        "C:\\Users\\alex.mollard\\.local\\share\\mind\\src\\mind.ts",
+        "mcp"
+      ],
+      "enabled": true
+    },
+    "tracy": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\alex.mollard\\.config\\opencode\\mcp-servers\\tracy-mcp.exe"
+      ],
+      "enabled": true
+    },
+    "clangd-mcp": {
+      "type": "local",
+      "command": [
+        "node",
+        "C:\\Users\\alex.mollard\\clangd-mcp-server\\dist\\index.js"
+      ],
+      "enabled": true
+    },
+    "github-mcp": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\alex.mollard\\.bun\\bin\\github-mcp-server.exe",
+        "stdio"
+      ],
+      "enabled": true,
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "codebase-memory": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\alex.mollard\\AppData\\Local\\Programs\\codebase-memory-mcp\\codebase-memory-mcp.exe"
+      ],
+      "enabled": true
+    },
+    "token-optimizer": {
+      "type": "local",
+      "command": ["npx", "-y", "@cocaxcode/token-optimizer-mcp", "--mcp"],
+      "enabled": true
+    },
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp"],
+      "enabled": true
+    },
+    "notion": {
+      "type": "remote",
+      "url": "https://mcp.notion.com/mcp",
+      "enabled": true
+    },
+    "aethercore": {
+      "type": "local",
+      "command": ["python", "D:\\AetherCore\\tools\\mcp\\aethercore_mcp.py"],
+      "enabled": true,
+      "env": {
+        "AETHER_REPO": "D:\\AetherCore",
+        "AETHER_CONTROL_PORT": "8787"
+      }
+    }
+  },
+
+  // --- Custom agents ---------------------------------------------------------
+  // Plan and Build are opencode's built-in primary agents. The Greybeard guidelines
+  // are wired in globally via "instructions" below (they shape the build/default
+  // agent), not as a separate agent. The one custom agent here is read-only Review.
+  "agent": {
+    "review": {
+      "description": "Read-only code review: correctness, safety, and clarity. Proposes diffs, never edits.",
+      "mode": "all",
+      "temperature": 0.1,
+      "prompt": "You are a senior code reviewer for a C++ codebase. Review the changes for correctness and clarity: undefined behaviour, lifetime/ownership and dangling references, thread-safety, error and RAII handling, and clear performance or readability problems. Reference exact file:line, separate must-fix issues from optional suggestions, and be specific rather than generic. You are read-only — propose diffs, do not apply them.",
+      "tools": { "write": false, "edit": false },
+      "permission": { "edit": "deny" }
+    }
+  },
+
+  // --- Providers -------------------------------------------------------------
+  "provider": {
+    // --- GPUStack (self-hosted, internal) ----------------------------------
+    // OpenAI-compatible endpoint. Auth comes from the GPUSTACK_API_KEY env var
+    // (setx GPUSTACK_API_KEY "..." then restart the shell) — never inline the key here.
+    //
+    // Add model entries below as you decide which to use; the key is the exact
+    // model id GPUStack reports. List them with:
+    //   curl --ssl-no-revoke -H "Authorization: Bearer $env:GPUSTACK_API_KEY" \
+    //        https://baai.ba.bigant-internal.com/v1/models
+    "gpustack": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "GPUStack (BigAnt)",
+      "options": {
+        "baseURL": "https://baai.ba.bigant-internal.com/v1",
+        "apiKey": "{env:GPUSTACK_API_KEY}"
+      },
+      // Auto-populated at startup by plugins/gpustack-models.js, which queries
+      // /v1/models and rewrites this map. The entry below is only an offline
+      // floor for the case where the server is unreachable AND the discovery
+      // cache is empty — you should not need to maintain it by hand.
+      "models": {
+        "qwen3.6-35b-a3b-fp8": { "name": "Qwen3.6 35B A3B FP8 (GPUStack)" }
+      }
+    },
+
+    "google": {
+      "options": {
+        "websearch_cited": {
+          "model": "gemini-2.5-flash"
+        }
+      }
+    }
+  },
+
+  "instructions": [
+    "C:/Users/alex.mollard/agent-core/adapters/opencode.md",
+    "C:/Users/alex.mollard/agent-core/core/00-identity.md",
+    "C:/Users/alex.mollard/agent-core/core/10-commit-style.md",
+    "C:/Users/alex.mollard/agent-core/core/20-principles.md",
+    "C:/Users/alex.mollard/agent-core/core/30-gatekeeper.md",
+    "C:/Users/alex.mollard/agent-core/core/40-code-discovery.md",
+    "C:/Users/alex.mollard/agent-core/core/45-memory-mind.md",
+    "C:/Users/alex.mollard/agent-core/core/50-rtk.md"
+  ]
+}
