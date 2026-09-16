@@ -135,9 +135,25 @@ desktop session and checking that the `agent-core` files appear under **Memory f
 Defects 1 and 2 fixed 2026-09-16: one `// shortcut:` marker, and section 1 now
 defers to Gate 1 on when to ask versus default.
 
-Defect 3 (the ~1,300-token Gatekeeper/principles overlap) is left OPEN. It is a
-judgement rewrite of your own rules, not a mechanical fix, and is the single
-biggest lever on the 394-line total.
+Defect 3 partially fixed 2026-09-16 — and my estimate of it was wrong.
+
+I wrote "~1,300 tokens of duplication", but 1,282 was the *whole Gatekeeper file*,
+not its duplicated portion. Removing every genuine restatement without losing a rule
+saved only **258 chars (~69 tokens)**: Gate 1 now points at §7 and §1 instead of
+re-deriving them, Gate 2 points at §2 for scope and the never-simplify-away list,
+and §5's Efficiency pillar points at §7 instead of restating "reuse before you build"
+a third time.
+
+The remaining overlap is **conceptual, not textual**: Gate 1 and §1 cover the same
+ground in two framings (principle vs procedure), as do Gate 2's ladder and §2.
+Collapsing that would save an estimated 800-900 tokens but means deleting one of the
+two framings — a structural decision about how you want your own rules organised,
+not a defect to be silently fixed. Left to the user.
+
+Note against the evidence above: Anthropic's own `/doctor` trim guidance keeps
+"pitfalls, rationale, and conventions that differ from tool defaults" and cuts only
+what Claude can derive from the codebase. That argues against stripping the long
+rationale sentences, which is where the remaining bulk sits.
 
 ## Evidence on instruction length (arXiv, 2026)
 

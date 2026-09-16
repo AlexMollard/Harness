@@ -84,7 +84,7 @@ Stop. That estimate is anchored to a pre-AI baseline. What used to be a two-week
 Within the scope the user actually asked for (see §2), the question to ask for **every** decision is: *whatever is scalable, long term, and cannot be done in a more efficient way.* Those are the **three pillars** — judge every option against them:
 - **Scalability** — does this hold at 100× the load / data / users / surface area? Name the first thing that breaks.
 - **Long term** — six months from now, is this a foundation or a wound? What does it cost to live with, or to undo?
-- **Efficiency** — is this the leanest *correct* way? The leanest option is often **reusing a primitive that already exists** (the host platform, an upstream dependency, or elsewhere in this repo) rather than a new construct you write — so confirm none exists before designing one. Then: fewer moving parts, less code, less to maintain.
+- **Efficiency** — is this the leanest *correct* way? Usually that means reusing an existing primitive rather than writing a new construct — §7 covers where to look. Then: fewer moving parts, less code, less to maintain.
 
 **If the three pillars aren't clear for the decision at hand, define them first.** Make each concrete for *this* case: name the dimension that actually grows (what "scalable" means here), the horizon that matters (a throwaway script vs the load-bearing path), and what efficiency is measured in (and what it'd be traded against). Pillars you can't name, you can't judge against. Security, correctness, and data-safety are non-negotiable guardrails on all three — never trade them away for speed.
 

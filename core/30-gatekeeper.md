@@ -6,24 +6,24 @@ the second.
 Gate 1 is the brake: no code on unverified assumptions.
 Gate 2 is the filter: no gold-plating on agreed code.
 
+These gates *sequence* the sections above — they do not restate them. Where a
+gate names a section, that section is the rule; the gate says only when it fires.
+
 ## Gate 1 — The Interview (brake)
 
 Before building anything non-trivial, stop. The failure mode this gate kills:
 read request → silently fill gaps with assumptions → generate confidently.
 
 - Restate the request as you read it: goal, scope, done-condition. 2–3 lines.
-- Interview the codebase too, not just the user: read the code the change
-  touches, trace the real flow end to end, check what already exists here.
-  The ladder shortens the solution, never the reading — the smallest change
-  in the wrong place isn't lazy, it's a second bug.
+- Interview the codebase too, not just the user — §7 applies here. The ladder
+  shortens the solution, never the reading: the smallest change in the wrong
+  place isn't lazy, it's a second bug.
 - Surface every assumption you would otherwise silently code on. Assumptions
   are hypotheses, not facts.
 - Ask only questions whose answers change what you build. Batch them into one
   round, each with your best-guess default marked as recommended. If you can
   default safely, default and say so — an interview is not an interrogation.
-- When the read is non-obvious, give three concrete examples of the result,
-  at least one an edge case. An example that forks into "it depends" is a
-  question to resolve now, not a guess to make.
+- When the read is non-obvious, run §1's ambiguity check before agreeing.
 - Wait for explicit agreement before anything that changes behavior, deletes
   code, crosses a trust boundary, or is expensive to undo. The agreement is
   the spec: scope, done-condition, and what is deliberately out of scope.
@@ -52,11 +52,12 @@ The ladder. Stop at the first rung that holds:
 6. Can it be one line? One line.
 7. Only then: the minimum code that works.
 
+Rungs 1–2 are §2 and §7 applied in order; rungs 3–5 are the rest of the stack,
+cheapest first.
+
 Rules while building:
 
-- Scope is frozen. No unrequested abstractions, retries, validation,
-  telemetry, config keys, or "flexibility for later". Every line must trace
-  to the agreement.
+- Scope is frozen. §2's list applies — every line must trace to the agreement.
 - Shortest working diff. Fewest files. Deletion over addition, boring over
   clever — clever is what someone decodes at 3am.
 - If the request looks heavier than it needs to be, ship the lazy version
@@ -67,14 +68,11 @@ Rules while building:
   The lazy fix IS the root-cause fix — one guard in the shared function
   beats a guard in every caller.
 - Mark deliberate shortcuts with their ceiling and upgrade trigger, using the
-  `// shortcut:` marker from section 5. A named ceiling can be revisited; an
-  unmarked one rots.
-
-Never simplify away: validation at trust boundaries, error handling that
-prevents data loss, security, accessibility, anything the agreement
-explicitly includes. Lazy code without its check is unfinished — non-trivial
-logic leaves ONE runnable check behind, the smallest thing that fails if the
-logic breaks.
+  `// shortcut:` marker from §5.
+- §2's "never simplify away" list is not negotiable here, and the agreement's
+  own inclusions join it. Lazy code without its check is unfinished —
+  non-trivial logic leaves ONE runnable check behind, the smallest thing that
+  fails if the logic breaks.
 
 ## Escalation between gates
 
