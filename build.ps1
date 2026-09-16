@@ -100,7 +100,9 @@ if ('opencode' -in $targets) {
   $want = @($manifest['opencode'] | ForEach-Object { "$Home_/agent-core/core/$_.md" })
   $want = , "$Home_/agent-core/adapters/opencode.md" + $want
   $raw = Get-Content -Raw -LiteralPath $cfg
-  $json = ($want | ForEach-Object { '    "' + ($_ -replace '/', '\\') + '"' }) -join ",`n"
+  # Forward slashes: JSON-legal on Windows and needs no escaping. Backslashes here
+  # produce invalid escapes (\U, \a) because $HOME already contains them.
+  $json = ($want | ForEach-Object { '    "' + ($_ -replace '\\', '/') + '"' }) -join ",`n"
   $new = [regex]::Replace($raw, '(?s)"instructions"\s*:\s*\[.*?\]', "`"instructions`": [`n$json`n  ]")
   if ($new -eq $raw) { Write-Host "  ! no instructions array found - add one manually" -ForegroundColor Red }
   else { Write-Target $cfg $new }
