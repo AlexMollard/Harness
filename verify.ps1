@@ -56,7 +56,12 @@ function Test-Live {
   return $true
 }
 
-$targets = if ($Only) { $Only } else { @('claude', 'omp', 'codex', 'opencode') }
+# Codex is not a default target: it is not in active use, and its CLI currently
+# rejects every model ("not supported when using Codex with a ChatGPT account"),
+# so probing it would fail the run for a reason unrelated to agent-core. Its
+# AGENTS.md is still generated and kept current by build.ps1.
+# Check it explicitly with:  ./verify.ps1 -Only codex
+$targets = if ($Only) { $Only } else { @('claude', 'omp', 'opencode') }
 Write-Host "agent-core verify" -ForegroundColor Cyan
 
 Write-Host "static wiring:"

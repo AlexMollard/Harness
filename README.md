@@ -86,6 +86,9 @@ ever deletes a file — superseded dirs are renamed to `<dir>.preunify`.
 that failed to resolve its import answers MISSING. That is the check that catches
 drift returning — run it after every build.
 
-Status at last run: Claude Code, omp and opencode **pass live**. Codex passes the
-static check; its live probe is blocked by an unrelated auth problem — the CLI
-rejects every model with *"not supported when using Codex with a ChatGPT account"*.
+Default targets are Claude Code, omp and opencode - all three **pass live**.
+
+Codex is generated and kept current by `build.ps1`, but is not verified by default:
+it is not in active use, and its CLI currently rejects every model with *"not
+supported when using Codex with a ChatGPT account"*, which would fail the run for a
+reason unrelated to agent-core. Check it deliberately with `./verify.ps1 -Only codex`.
