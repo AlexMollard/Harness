@@ -23,7 +23,8 @@ return insufficient results. Always read a file before editing it.
 
 ## graphify
 
-`graphify` turns any input into a persistent knowledge graph. Trigger: `/graphify`.
+How to use `graphify` when a project already has a graph. Invoking it is handled
+by the `graphify` skill's own trigger - not repeated here, so the two do not collide.
 
 - For codebase questions, run `graphify query "<question>"` first when
   `graphify-out/graph.json` exists. Use `graphify path "<A>" "<B>"` for
