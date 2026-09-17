@@ -238,9 +238,18 @@ username on the next machine doesn't break the hooks.
 
 ## Verification
 
-`verify.ps1` asks each live harness three questions whose answers appear only inside
-`core/`: the name of Gate 2, the title of section 8, and what RTK stands for. A
-harness that failed to resolve its import answers MISSING.
+`verify.ps1` checks two things.
+
+**Instructions** - it asks each live harness three questions whose answers appear
+only inside `core/`: the name of Gate 2, the title of section 8, and what RTK stands
+for. A harness that failed to resolve its import answers MISSING.
+
+**Hooks** - it asserts every hook wired in `settings.json` exists on disk, and that
+each discovery gate speaks and stays silent in the right conditions, against a
+throwaway fixture so the check works on any machine. These run in `-Static` too;
+they cost nothing. Hooks are built to exit 0 silently on failure so they can never
+block work, which also means a broken one is invisible - this is what makes it
+visible.
 
 That is the check that catches drift coming back - run it after every build. Both
 harnesses pass live at last run.
