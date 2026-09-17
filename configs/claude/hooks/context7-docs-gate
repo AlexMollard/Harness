@@ -1,0 +1,56 @@
+#!/bin/bash
+# PreToolUse (WebFetch): if the URL is a known library-docs host, remind the agent
+# that context7 serves the same content already parsed and version-matched.
+#
+# Deliberately narrow. It fires on a domain match and nothing else - no guessing
+# at intent - so it stays silent on the vast majority of fetches. A hook that
+# fires on everything is a hook you learn to ignore.
+#
+# NEVER blocks. Exits 0 on every path, including malformed input.
+#
+# To add a host: put it in DOCS_HOSTS below. Substring match against the URL
+# host, so "readthedocs.io" covers every project that uses it.
+
+set -u
+payload=$(cat 2>/dev/null || true)
+
+# Only worth saying anything if context7 is actually installed.
+grep -q '"context7@claude-plugins-official"[[:space:]]*:[[:space:]]*true' \
+  "$HOME/.claude/settings.json" 2>/dev/null || exit 0
+
+url=$(printf '%s' "$payload" | sed -n 's/.*"url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+[ -n "${url:-}" ] || exit 0
+
+host=$(printf '%s' "$url" | sed -E 's#^[a-zA-Z]+://##; s#/.*##; s#:.*##' | tr 'A-Z' 'a-z')
+[ -n "$host" ] || exit 0
+
+DOCS_HOSTS="
+developer.mozilla.org docs.python.org react.dev reactjs.org nextjs.org nodejs.org
+learn.microsoft.com docs.microsoft.com dotnet.microsoft.com docs.oracle.com
+pkg.go.dev go.dev doc.rust-lang.org docs.rs kotlinlang.org developer.android.com
+docs.gradle.org typescriptlang.org vuejs.org angular.dev angular.io svelte.dev
+tailwindcss.com docs.djangoproject.com flask.palletsprojects.com
+fastapi.tiangolo.com expressjs.com prisma.io postgresql.org dev.mysql.com
+redis.io docs.docker.com kubernetes.io docs.aws.amazon.com cloud.google.com
+spring.io laravel.com guides.rubyonrails.org docs.unity3d.com
+dev.epicgames.com cppreference.com cmake.org readthedocs.io supabase.com
+vitejs.dev webpack.js.org jestjs.io playwright.dev pytorch.org
+"
+
+hit=""
+for h in $DOCS_HOSTS; do
+  case "$host" in *"$h"*) hit="$h"; break ;; esac
+done
+[ -n "$hit" ] || exit 0
+
+cat <<EOF
+$host is a library-docs host. context7 is installed and serves the same content
+already parsed, version-matched and trimmed - usually a fraction of the tokens of
+fetching and scanning the page.
+
+  resolve-library-id  ->  query-docs
+
+Fetch the page directly if context7 has no entry for this library, if you need a
+specific page rather than API reference, or if you already tried it.
+EOF
+exit 0

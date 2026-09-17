@@ -24,6 +24,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "WebFetch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/context7-docs-gate",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "SessionStart": [
