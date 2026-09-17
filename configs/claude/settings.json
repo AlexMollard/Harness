@@ -14,6 +14,16 @@
             "command": "rtk hook claude"
           }
         ]
+      },
+      {
+        "matcher": "Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/graphify-discovery-gate",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "SessionStart": [

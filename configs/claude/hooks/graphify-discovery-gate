@@ -1,0 +1,42 @@
+#!/bin/bash
+# PreToolUse (Grep|Glob): remind the agent that this repo has a graphify graph.
+#
+# CLAUDE.md is context, not enforcement - a rule buried in 362 lines of always-on
+# instruction loses to habit. This fires at the moment the habit shows up.
+#
+# NEVER blocks. Emits nothing unless graphify-out/graph.json exists in the
+# project, so it is silent in every repo without a graph. Any failure is silent.
+
+set -u
+payload=$(cat 2>/dev/null || true)
+
+# Claude Code sends JSON on stdin including cwd; fall back to $PWD.
+dir=$(printf '%s' "$payload" | sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+dir=${dir//\\\\/\\}
+[ -n "${dir:-}" ] && [ -d "$dir" ] || dir="$PWD"
+
+# Walk up looking for a graph, so it works from a subdirectory.
+found=""
+d="$dir"
+for _ in 1 2 3 4 5 6; do
+  if [ -f "$d/graphify-out/graph.json" ]; then found="$d"; break; fi
+  parent=$(dirname "$d")
+  [ "$parent" = "$d" ] && break
+  d="$parent"
+done
+[ -n "$found" ] || exit 0
+command -v graphify >/dev/null 2>&1 || exit 0
+
+cat <<EOF
+This repo has a graphify knowledge graph at $found/graphify-out/graph.json.
+
+Prefer it over raw grep for structural questions - it returns a scoped subgraph
+instead of a wall of matches:
+  graphify query "<question>"     what/where/how questions
+  graphify path "<A>" "<B>"       how two things relate
+  graphify explain "<concept>"    one concept and its neighbours
+
+Grep is still right for string literals, error messages, config values and
+non-code files. If you already tried the graph and it came up short, carry on.
+EOF
+exit 0
