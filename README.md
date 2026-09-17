@@ -16,6 +16,7 @@ Everything here is declarative and version-controlled. No secret is ever committ
 | **Global skills** | 8, indexed in every session |
 | **On-demand skills** | 108, reachable but not indexed (see *Skill tiering*) |
 | **Slash commands** | 3, shared by both harnesses |
+| **Hooks** | 5, including 2 discovery gates that enforce what instructions can't |
 | **Machine config** | Claude Code settings + hooks, omp config/models/mcp |
 | **Scripts** | build, verify, sync-skills, export-config, install |
 
@@ -122,10 +123,36 @@ grep -rhoE '\{"type":"toolCall","id":"[^"]*","name":"[^"]+"' ~/.omp/agent/sessio
 
 ---
 
-## Hooks and settings
+## Hooks - the enforcement layer
 
-`configs/claude/settings.json` carries the Claude Code setup: `rtk` on Bash,
-`headroom-startup` on session start, telemetry on PostToolUse, enabled plugins, and
+Instructions in `core/` are **context, not enforcement**. Anthropic's own docs say
+so: *"Claude treats them as context, not enforced configuration. To block an action
+regardless of what Claude decides, use a PreToolUse hook instead."* A rule sitting
+85 directives into 362 lines loses to habit. A hook fires at the moment the habit
+shows up.
+
+| Event | Hook | Fires when |
+|---|---|---|
+| `PreToolUse` Bash | `rtk hook claude` | always - rewrites commands through the RTK proxy |
+| `PreToolUse` Grep/Glob | `graphify-discovery-gate` | `graphify-out/graph.json` exists in the project |
+| `PreToolUse` WebFetch | `context7-docs-gate` | the URL host is a known library-docs host |
+| `SessionStart` | `headroom-startup` | startup and resume |
+| `PostToolUse` | telemetry | always |
+
+The two discovery gates share the property that makes a hook survive contact with
+daily use: **a binary trigger, never a guess at intent.** `graphify-discovery-gate`
+checks one thing - does a graph file exist - and walks up six levels so it works
+from a subdirectory. `context7-docs-gate` matches the fetch URL against a host list
+in the script, and says nothing unless the context7 plugin is actually enabled. Both
+are silent everywhere else, neither ever blocks, and both exit 0 on malformed input.
+
+A hook that fires on everything is a hook you learn to ignore.
+
+Add a docs host by editing `DOCS_HOSTS` inside `configs/claude/hooks/context7-docs-gate`.
+
+### Settings
+
+`configs/claude/settings.json` also carries enabled plugins, the effort level, and
 `autoCompactWindow: 500000`.
 
 That last one matters. With a 1M context window auto-compaction defaults to ~970k,

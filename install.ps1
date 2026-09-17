@@ -87,7 +87,8 @@ Step "3. config files"
 Install-File (Join-Path $Cfg 'claude/settings.json') "$HOME/.claude/settings.json"
 foreach ($h in (Get-ChildItem (Join-Path $Cfg 'claude/hooks') -File -EA SilentlyContinue)) {
   Install-File $h.FullName "$HOME/.claude/hooks/$($h.Name)"
-  if (-not $WhatIf -and $IsLinux -or $IsMacOS) { chmod +x "$HOME/.claude/hooks/$($h.Name)" 2>$null }
+  # parens matter: without them -and binds tighter and macOS chmods during -WhatIf
+  if (-not $WhatIf -and ($IsLinux -or $IsMacOS)) { chmod +x "$HOME/.claude/hooks/$($h.Name)" 2>$null }
 }
 foreach ($f in 'config.yml', 'mcp.json', 'models.yml') {
   Install-File (Join-Path $Cfg "omp/$f") "$HOME/.omp/agent/$f"
