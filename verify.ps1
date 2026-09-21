@@ -131,6 +131,50 @@ try {
 }
 finally { Remove-Item $fix -Recurse -Force -EA SilentlyContinue }
 
+# omp model roles. Two failure modes, both silent until a request actually runs:
+# the installed roles drifting from the policy, and a role pointing at a provider
+# that no longer exists (which is what zai-headroom became when headroom went).
+Write-Host "omp roles:"
+$rp = Join-Path $Root 'configs/omp/roles.psd1'
+$cy = "$HOME/.omp/agent/config.yml"
+if ((Test-Path $rp) -and (Test-Path $cy)) {
+  $policy = Import-PowerShellDataFile $rp
+  $want = @{}
+  foreach ($k in $policy.base.Keys) { $want[$k] = $policy.base[$k] }
+  $ov = @()
+  foreach ($o in $policy.overlays) {
+    if (-not [Environment]::GetEnvironmentVariable($o.key)) { continue }
+    foreach ($k in $o.roles.Keys) { $want[$k] = $o.roles[$k] }
+    $ov += $o.name
+  }
+  # Scope to the modelRoles block - config.yml is full of other indented keys
+  # (memory.backend, statusLine.preset) that would read as bogus providers.
+  $have = @{}
+  $cl = (Get-Content -Raw $cy) -replace "`r`n", "`n" -split "`n"
+  $i = [array]::FindIndex($cl, [Predicate[string]] { $args[0] -match '^modelRoles:\s*$' })
+  for ($i++; $i -ge 1 -and $i -lt $cl.Count; $i++) {
+    if ($cl[$i] -match '^[A-Za-z]') { break }
+    if ($cl[$i] -match '^\s+([A-Za-z][A-Za-z0-9_-]*):\s*(\S+)$') { $have[$Matches[1]] = $Matches[2] }
+  }
+  $drift = $want.Keys | Where-Object { $have[$_] -ne $want[$_] }
+  $tag = if ($ov) { "base + $($ov -join ', ')" } else { 'base only' }
+  if ($drift) {
+    foreach ($d in $drift) { Write-Host "  FAIL $d is $($have[$d]) - policy says $($want[$d])" -ForegroundColor Red }
+    $fail++
+  }
+  else { Write-Host "  ok   roles match policy ($tag)" -ForegroundColor Green }
+
+  # Every provider a role names must exist, or the request 401s at runtime.
+  $defined = @('anthropic')   # built into omp; the rest must be declared
+  foreach ($m in (Select-String -Path "$HOME/.omp/agent/models.yml" -Pattern '^\s{2}([A-Za-z0-9_-]+):\s*$' -EA SilentlyContinue)) {
+    $defined += $m.Matches[0].Groups[1].Value
+  }
+  $orphan = $have.Values | ForEach-Object { ($_ -split '/')[0] } |
+  Sort-Object -Unique | Where-Object { $_ -and $_ -notin $defined }
+  if ($orphan) { Write-Host "  FAIL role points at undefined provider: $($orphan -join ', ')" -ForegroundColor Red; $fail++ }
+  else { Write-Host "  ok   every role resolves to a defined provider" -ForegroundColor Green }
+}
+
 if (-not $Static) {
   Write-Host "live load (calls each harness once):"
   if ('claude' -in $targets) { if (-not (Test-Live 'claude  ' { claude -p --model haiku $Probe })) { $fail++ } }

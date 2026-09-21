@@ -63,17 +63,31 @@ foreach ($t in @(
 
 # --- 2. secrets the exported config expects --------------------------------
 Step "2. secrets (export rewrote real keys to env var names)"
-$needed = @()
+# Which env var each provider's key comes from.
+$providerKey = @{}
 $mf = Join-Path $Cfg 'omp/models.yml'
 if (Test-Path $mf) {
-  $needed += Select-String -Path $mf -Pattern '^\s*apiKey:\s*([A-Z][A-Z0-9_]*)\s*$' |
-  ForEach-Object { $_.Matches[0].Groups[1].Value }
+  $p = $null
+  foreach ($line in (Get-Content $mf)) {
+    if ($line -match '^\s{2}([A-Za-z0-9_-]+):\s*$') { $p = $Matches[1] }
+    elseif ($p -and $line -match '^\s*apiKey:\s*([A-Z][A-Z0-9_]*)\s*$') { $providerKey[$p] = $Matches[1] }
+  }
 }
-$needed = $needed | Sort-Object -Unique
-if (-not $needed) { Ok "none required" }
-foreach ($v in $needed) {
+# A key is REQUIRED only if the baseline config.yml actually routes a role at that
+# provider. Anything else - zai, say - merely unlocks an overlay, so its absence is
+# a normal, fully working install rather than a failure.
+$used = @()
+$cy = Join-Path $Cfg 'omp/config.yml'
+if (Test-Path $cy) {
+  $used = Select-String -Path $cy -Pattern '^\s+[A-Za-z][A-Za-z0-9_-]*:\s*([a-z0-9_-]+)/' |
+  ForEach-Object { $_.Matches[0].Groups[1].Value } | Sort-Object -Unique
+}
+if (-not $providerKey.Count) { Ok "none required" }
+foreach ($p in ($providerKey.Keys | Sort-Object)) {
+  $v = $providerKey[$p]
   if ([Environment]::GetEnvironmentVariable($v)) { Ok "$v is set" }
-  else { Bad "$v is not set - setx $v `"<value>`" then restart the shell" }
+  elseif ($p -in $used) { Bad "$v is not set - setx $v `"<value>`" then restart the shell" }
+  else { Warn "$v is not set - optional; $p models stay unused" }
 }
 
 if ($problems -and -not $Force) {
@@ -93,9 +107,14 @@ foreach ($f in 'config.yml', 'mcp.json', 'models.yml') {
   Install-File (Join-Path $Cfg "omp/$f") "$HOME/.omp/agent/$f"
 }
 
-# --- 4. omp managed skills -------------------------------------------------
+# --- 4. omp model roles ----------------------------------------------------
+Step "4. omp model roles"
+if ($WhatIf) { Write-Host "  would apply configs/omp/roles.psd1 to ~/.omp/agent/config.yml" -ForegroundColor Yellow }
+else { & (Join-Path $Root 'set-omp-roles.ps1') -Path "$HOME/.omp/agent/config.yml" -Mode auto | Out-Null }
+
+# --- 5. omp managed skills -------------------------------------------------
 if (-not $SkipSkills) {
-  Step "4. omp managed skills"
+  Step "5. omp managed skills"
   $src = Join-Path $Root 'skills/managed'
   $dst = "$HOME/.omp/agent/managed-skills"
   if (-not (Test-Path $src)) { Warn "skills/managed not in repo" }
@@ -108,16 +127,16 @@ if (-not $SkipSkills) {
   }
 }
 
-# --- 5. wire instructions and skills --------------------------------------
-Step "5. wire instructions, skills and commands"
+# --- 6. wire instructions and skills --------------------------------------
+Step "6. wire instructions, skills and commands"
 if ($WhatIf) { Write-Host "  would run build.ps1 and sync-skills.ps1 -Link" -ForegroundColor Yellow }
 else {
   & (Join-Path $Root 'build.ps1')
   & (Join-Path $Root 'sync-skills.ps1') -Link
 }
 
-# --- 6. prove it -----------------------------------------------------------
-Step "6. verify"
+# --- 7. prove it -----------------------------------------------------------
+Step "7. verify"
 if ($WhatIf) { Write-Host "  would run verify.ps1" -ForegroundColor Yellow; return }
 & (Join-Path $Root 'verify.ps1') -Static
 Write-Host "`nStatic wiring passed. Run ./verify.ps1 (no -Static) to prove each harness" -ForegroundColor Cyan

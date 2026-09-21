@@ -53,6 +53,14 @@ foreach ($f in 'config.yml', 'mcp.json') {
   if (Test-Path $src) { Save-Text (Join-Path $Cfg "omp/$f") (ConvertTo-Portable (Get-Content -Raw $src)) }
 }
 
+# Model roles are install-time policy, not machine state: this PC may hold a Z.AI
+# key and be running GLM roles, but the committed baseline has to be the one a
+# machine with no extra credentials can actually run. Normalise back to base -
+# install.ps1 re-applies the overlay wherever the key exists.
+if (-not $WhatIf) {
+  & (Join-Path $Root 'set-omp-roles.ps1') -Path (Join-Path $Cfg 'omp/config.yml') -Mode base | Out-Null
+}
+
 # models.yml carries provider API keys. Rewrite any literal key to the env-var
 # name for its provider; leave values that are already env-var names alone.
 $models = Get-Content "$HOME/.omp/agent/models.yml"

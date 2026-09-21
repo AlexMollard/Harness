@@ -18,7 +18,7 @@ Everything here is declarative and version-controlled. No secret is ever committ
 | **Slash commands** | 3, shared by both harnesses |
 | **Hooks** | 4, including 2 discovery gates that enforce what instructions can't |
 | **Machine config** | Claude Code settings + hooks, omp config/models/mcp |
-| **Scripts** | build, verify, sync-skills, export-config, install |
+| **Scripts** | build, verify, sync-skills, export-config, set-omp-roles, install |
 
 ```
 core/          the actual rules - harness-neutral, edit these
@@ -30,6 +30,7 @@ skills/
   managed/     108 omp autolearn skills, carried between machines
   catalogue.md generated index of all of them
 configs/       this machine's Claude Code and omp config, secrets redacted
+  omp/roles.psd1 which model serves each omp role, and what an API key unlocks
 _restore/      every file verbatim as it was before unification
 ```
 
@@ -165,6 +166,38 @@ come back on a fresh machine.
 
 ---
 
+## Model roles
+
+omp's roles are assigned from what the machine can actually reach. The policy lives
+in [`configs/omp/roles.psd1`](configs/omp/roles.psd1) and `install.ps1` applies it.
+
+| Role | No Z.AI key | `ZAI_API_KEY` set |
+|---|---|---|
+| `plan` | `anthropic/claude-opus-5:high` | `zai/glm-5.3-flash:high` |
+| `task` | `anthropic/claude-sonnet-5:low` | `zai/glm-5.3-flash:low` |
+| `advisor` | `anthropic/claude-opus-5:low` | `zai/glm-5.3-flash:low` |
+| `smol` | `gpustack/qwen3.8-27b-nvfp4:off` | `zai/glm-5.3-flash:low` |
+
+`commit`, `tiny`, `default`, `slow`, `vision` and `SeriousBuisness` are untouched by
+the policy and stay as `config.yml` has them.
+
+**Why this isn't just conditional YAML.** omp has no conditional provider.
+`resolve-config-value.ts` does `return envValue || valueConfig`, so an unset env var
+resolves to the **literal string** - `ZAI_API_KEY` would be sent as the bearer token
+and 401. There is no graceful runtime degradation, so the branch has to happen when
+config is written, not when a request runs.
+
+The `zai` provider talks to `https://api.z.ai/api/coding/paas/v4` **directly**. It
+used to route through a local headroom proxy on `:8787`; that was removed on
+2026-09-21 after measuring roughly 2% token savings, which did not justify pinning
+`ANTHROPIC_BASE_URL` at a port a fresh machine would have nothing listening on.
+
+Role assignment is install-time policy, not machine state, so `export-config.ps1`
+normalises it back to the baseline before committing. A PC that holds a Z.AI key
+runs GLM roles without pushing them onto every machine that clones the repo.
+
+---
+
 ## How each harness reads it
 
 Deliberately different - each host's own primitive beats a generator we maintain:
@@ -192,6 +225,7 @@ adapters remain in git history.
 ./verify.ps1 -Static     # check wiring on disk (fast, free)
 ./verify.ps1             # probe each live harness for core-only facts
 ./export-config.ps1      # capture this machine's config into the repo
+./set-omp-roles.ps1 -Path ~/.omp/agent/config.yml   # re-apply role policy
 ```
 
 ### Setting up a new machine
@@ -228,7 +262,9 @@ the export **fails** if anything secret-shaped survives the rewrite. `install.ps
 refuses to run until every named var is set, so a missing key surfaces up front
 rather than at runtime.
 
-Currently required: `GPUSTACK_API_KEY`.
+Currently required: `GPUSTACK_API_KEY`. Optional: `ZAI_API_KEY` (see *Model roles*)
+— a key is only demanded when the baseline config actually routes a role at that
+provider, so a missing optional one warns and installs anyway.
 
 Absolute home paths are stored as `__HOME__` and expanded on install, so a different
 username on the next machine doesn't break the hooks.
@@ -249,6 +285,11 @@ throwaway fixture so the check works on any machine. These run in `-Static` too;
 they cost nothing. Hooks are built to exit 0 silently on failure so they can never
 block work, which also means a broken one is invisible - this is what makes it
 visible.
+
+**omp roles** - it recomputes the policy for this machine's credentials and asserts
+the installed `config.yml` matches, then asserts every provider a role names is
+actually defined. That second check is the one that would have caught `zai-headroom`
+becoming a dangling reference when headroom was removed.
 
 That is the check that catches drift coming back - run it after every build. Both
 harnesses pass live at last run.
