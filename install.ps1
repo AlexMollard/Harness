@@ -113,8 +113,9 @@ if ($WhatIf) { Write-Host "  would apply configs/omp/roles.psd1 to ~/.omp/agent/
 else { & (Join-Path $Root 'set-omp-roles.ps1') -Path "$HOME/.omp/agent/config.yml" -Mode auto | Out-Null }
 
 # --- 5. omp managed skills -------------------------------------------------
-if (-not $SkipSkills) {
-  Step "5. omp managed skills"
+Step "5. omp managed skills"
+if ($SkipSkills) { Write-Host "  skipped (-SkipSkills)" -ForegroundColor DarkGray }
+else {
   $src = Join-Path $Root 'skills/managed'
   $dst = "$HOME/.omp/agent/managed-skills"
   if (-not (Test-Path $src)) { Warn "skills/managed not in repo" }
