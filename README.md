@@ -16,7 +16,7 @@ Everything here is declarative and version-controlled. No secret is ever committ
 | **Global skills** | 8, indexed in every session |
 | **On-demand skills** | 108, reachable but not indexed (see *Skill tiering*) |
 | **Slash commands** | 3, shared by both harnesses |
-| **Hooks** | 5, including 2 discovery gates that enforce what instructions can't |
+| **Hooks** | 4, including 2 discovery gates that enforce what instructions can't |
 | **Machine config** | Claude Code settings + hooks, omp config/models/mcp |
 | **Scripts** | build, verify, sync-skills, export-config, install |
 
@@ -136,7 +136,6 @@ shows up.
 | `PreToolUse` Bash | `rtk hook claude` | always - rewrites commands through the RTK proxy |
 | `PreToolUse` Grep/Glob | `graphify-discovery-gate` | `graphify-out/graph.json` exists in the project |
 | `PreToolUse` WebFetch | `context7-docs-gate` | the URL host is a known library-docs host |
-| `SessionStart` | `headroom-startup` | startup and resume |
 | `PostToolUse` | telemetry | always |
 
 The two discovery gates share the property that makes a hook survive contact with
@@ -229,7 +228,7 @@ the export **fails** if anything secret-shaped survives the rewrite. `install.ps
 refuses to run until every named var is set, so a missing key surfaces up front
 rather than at runtime.
 
-Currently required: `GPUSTACK_API_KEY`, `ZAI_HEADROOM_API_KEY`.
+Currently required: `GPUSTACK_API_KEY`.
 
 Absolute home paths are stored as `__HOME__` and expanded on install, so a different
 username on the next machine doesn't break the hooks.

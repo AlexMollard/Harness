@@ -1,8 +1,4 @@
 {
-  "env": {
-    "ANTHROPIC_BASE_URL": "http://127.0.0.1:8787",
-    "ANTHROPIC_TARGET_API_URL": "https://api.anthropic.com"
-  },
   "model": "opus[1m]",
   "hooks": {
     "PreToolUse": [
@@ -32,28 +28,6 @@
             "type": "command",
             "command": "~/.claude/hooks/context7-docs-gate",
             "timeout": 5
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "startup",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/headroom-startup",
-            "timeout": 65
-          }
-        ]
-      },
-      {
-        "matcher": "resume",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/headroom-startup",
-            "timeout": 65
           }
         ]
       }

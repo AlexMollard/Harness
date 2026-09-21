@@ -1,4 +1,6 @@
-False
-
 # Codex installs its own system skills into the shared pool; it owns these.
 skills/global/.system/
+
+# ~/.claude/skills is a junction INTO this pool, so the desktop app's per-session
+# skill sync lands here. Session/workspace UUIDs, not config - never commit them.
+skills/global/synced/

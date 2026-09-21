@@ -55,7 +55,6 @@ foreach ($t in @(
     @{ n = 'omp'; req = $false; why = 'omp harness' }
     @{ n = 'git'; req = $true; why = 'version control' }
     @{ n = 'rtk'; req = $false; why = 'Bash PreToolUse hook' }
-    @{ n = 'headroom'; req = $false; why = 'SessionStart hook' }
   )) {
   if (Get-Command $t.n -EA SilentlyContinue) { Ok "$($t.n) found" }
   elseif ($t.req) { Bad "$($t.n) not on PATH - $($t.why)" }
