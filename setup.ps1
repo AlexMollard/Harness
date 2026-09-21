@@ -54,26 +54,85 @@ Write-Host (Hue "  └$('─' * $w)┘" '36')
 if ($WhatIf) { Write-Host (Hue "     dry run - nothing will be written" '33') }
 
 # --- 1. environment --------------------------------------------------------
+# Every command here was verified against a primary source, not recalled:
+# winget IDs against the live registry, Claude Code against code.claude.com/docs,
+# graphify against its own README (the PyPI package really is "graphifyy" - the
+# plain name is being reclaimed), omp against this machine's bun manifest.
+$Tools = @(
+  @{ n = 'git'; req = $true; why = 'version control'
+    cmd = 'winget install --id Git.Git -e --accept-package-agreements --accept-source-agreements'
+  }
+  @{ n = 'claude'; req = $true; why = 'Claude Code CLI'
+    cmd = 'winget install --id Anthropic.ClaudeCode -e --accept-package-agreements --accept-source-agreements'
+    note = 'winget builds do not auto-update; set CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE=1 if you want that'
+  }
+  @{ n = 'omp'; req = $false; why = 'the second harness'
+    needs = 'bun'
+    needsCmd = 'winget install --id Oven-sh.Bun -e --accept-package-agreements --accept-source-agreements'
+    cmd = 'bun install -g @oh-my-pi/pi-coding-agent'
+  }
+  @{ n = 'rtk'; req = $false; why = 'token-optimising Bash proxy'
+    cmd = 'winget install --id rtk-ai.rtk -e --accept-package-agreements --accept-source-agreements'
+  }
+  @{ n = 'graphify'; req = $false; why = 'code knowledge graph - core/40-code-discovery.md uses it'
+    needs = 'uv'
+    needsCmd = 'winget install --id astral-sh.uv -e --accept-package-agreements --accept-source-agreements'
+    cmd = 'uv tool install graphifyy'
+    note = 'run "graphify install" afterwards to finish setup'
+  }
+)
+
+# A winget or uv install lands outside this process's PATH, so a re-check would
+# wrongly report failure without this.
+function Sync-Path {
+  $env:Path = @(
+    [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    [Environment]::GetEnvironmentVariable('Path', 'User')
+  ) -join ';'
+}
+
+function Invoke-Offered {
+  param([string]$Label, [string]$Cmd)
+  Say "would run: $Cmd"
+  if ($NonInteractive -or $WhatIf) { Say '(not offered in this mode)'; return $false }
+  if ((Read-Host "       Install $Label now? [y/N]") -notmatch '^(y|yes)$') { Say 'skipped'; return $false }
+  Write-Host ""
+  Invoke-Expression $Cmd
+  Write-Host ""
+  Sync-Path
+  return $true
+}
+
 Head 1 'Environment'
 $missing = @()
 Ok "PowerShell $($PSVersionTable.PSVersion)"
-foreach ($t in @(
-    @{ n = 'git'; id = 'Git.Git'; req = $true; why = 'version control' }
-    @{ n = 'claude'; id = ''; req = $true; why = 'Claude Code CLI' }
-    @{ n = 'omp'; id = ''; req = $false; why = 'omp harness - skip if you only use Claude Code' }
-    @{ n = 'rtk'; id = ''; req = $false; why = 'token-optimising Bash proxy' }
-  )) {
-  if (Get-Command $t.n -EA SilentlyContinue) { Ok $t.n }
-  elseif ($t.req) { No $t.n $t.why; $missing += $t }
-  else { Opt $t.n $t.why }
+foreach ($t in $Tools) {
+  if (Get-Command $t.n -EA SilentlyContinue) { Ok $t.n; continue }
+
+  if ($t.req) { No $t.n $t.why } else { Opt $t.n $t.why }
+
+  # Bootstrap whatever installs it (bun for omp, uv for graphify) first.
+  if ($t.needs -and -not (Get-Command $t.needs -EA SilentlyContinue)) {
+    Say "$($t.n) is installed by $($t.needs), which is also missing."
+    [void](Invoke-Offered $t.needs $t.needsCmd)
+    if (-not (Get-Command $t.needs -EA SilentlyContinue)) {
+      Say "Without $($t.needs) there is no way to install $($t.n)."
+      if ($t.req) { $missing += $t }
+      continue
+    }
+  }
+
+  [void](Invoke-Offered $t.n $t.cmd)
+  if (Get-Command $t.n -EA SilentlyContinue) {
+    Ok $t.n 'installed'
+    if ($t.note) { Say $t.note }
+  }
+  elseif ($t.req) { $missing += $t }
 }
 if ($missing) {
   Write-Host ""
-  Say "Missing something required. Install it, then run this again:"
-  foreach ($m in $missing) {
-    if ($m.id) { Say "  winget install $($m.id)" }
-    else { Say "  $($m.n): see its own install docs" }
-  }
+  Say 'Still missing something required. Install it, then run setup again:'
+  foreach ($m in $missing) { Say "  $($m.cmd)" }
   Write-Host ""
   exit 1
 }

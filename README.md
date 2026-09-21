@@ -27,9 +27,9 @@ cd "$HOME\agent-core"
 
 Or just **double-click `setup.bat`**.
 
-It checks your tools, asks for any API keys that are missing, saves them to your user
-environment, installs everything and verifies the result — stopping at the first
-problem rather than leaving you half-configured.
+It checks your tools and **offers to install anything missing**, asks for any API keys
+you don't have, saves them to your user environment, installs everything and verifies
+the result — stopping at the first problem rather than leaving you half-configured.
 
 > [!NOTE]
 > Keys are typed into a masked prompt and written via .NET straight to the user
@@ -48,9 +48,25 @@ rather than a batch copy that drifts.
 
 | Step | What happens | On failure |
 |:--:|---|---|
-| 1 | Check `git`, `claude`, `omp`, `rtk` | Stops, prints the `winget` command |
+| 1 | Check each tool below, show the exact command, install on `y` | Stops only if a **required** tool is still missing |
 | 2 | Work out which API keys the config needs, prompt for missing ones | Stops only if a **required** key is skipped |
 | 3 | Hand over to `install.ps1` — config, roles, skills, wiring, verify | Stops at the first failed gate |
+
+Nothing installs silently — every command is printed and needs a `y`. Where a tool is
+installed *by* another (omp by bun, graphify by uv), that one is offered first.
+
+| Tool | | Installed with |
+|---|---|---|
+| `git` | required | `winget install Git.Git` |
+| `claude` | required | `winget install Anthropic.ClaudeCode` |
+| `omp` | optional | `bun install -g @oh-my-pi/pi-coding-agent` |
+| `rtk` | optional | `winget install rtk-ai.rtk` |
+| `graphify` | optional | `uv tool install graphifyy` |
+
+> [!NOTE]
+> The PyPI package really is `graphifyy` — the plain name is being reclaimed upstream.
+> Run `graphify install` afterwards to finish its setup. winget builds of Claude Code
+> don't auto-update; set `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE=1` if you want that.
 
 Anything replaced is kept beside the original as `<file>.pre-install`. Re-running is
 safe; every step is idempotent.
