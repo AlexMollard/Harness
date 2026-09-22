@@ -1,6 +1,17 @@
 # GitHub costs nothing, ever
 
-This account runs at zero GitHub spend. Every metered surface stays unused.
+This account runs at zero GitHub spend. This is about **billing**, not about being
+cautious with git — read the next section before the rest.
+
+## Ordinary work is always fine — do it without asking
+
+Committing, pushing, pulling, fetching, cloning, branching, rebasing, tagging, opening
+and merging PRs, creating issues and releases, reading the API. None of it costs
+anything. Repository storage is free. Do all of it normally, on your own initiative,
+exactly as you would anywhere else.
+
+Never refuse, hedge, or ask permission for a normal git operation on the grounds of
+cost. Over-applying this rule is itself a failure.
 
 ## Never create anything that runs by itself
 

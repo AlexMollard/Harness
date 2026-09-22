@@ -79,7 +79,7 @@ safe; every step is idempotent.
 
 | | |
 |---|---|
-| 📜 **Instructions** | 7 core files, 393 lines, read by both harnesses |
+| 📜 **Instructions** | 7 core files, 404 lines, read by both harnesses |
 | 🧠 **Skills** | 8 always indexed, 108 on demand |
 | ⌨️ **Commands** | 3 slash commands, shared |
 | 🪝 **Hooks** | 5, including 2 discovery gates and 1 that blocks GitHub billing |
@@ -113,7 +113,7 @@ Loaded into every session on both harnesses.
 | `30-gatekeeper.md` | 98 | Two gates — the Interview and the Ponytail ladder |
 | `40-code-discovery.md` | 20 | Using `graphify` when a project has a graph |
 | `50-rtk.md` | 29 | RTK token-optimising CLI proxy |
-| `60-github-billing.md` | 31 | Zero GitHub spend — manual-dispatch workflows only, no metered storage |
+| `60-github-billing.md` | 42 | Zero GitHub spend — manual-dispatch workflows only, no metered storage |
 
 > [!TIP]
 > [`AUDIT.md`](AUDIT.md) measures what this costs per session, the contradictions found
@@ -188,6 +188,12 @@ It stops exactly two things, both objectively checkable:
    "explicit or manually run" carve-out.
 2. A command touching a metered surface: Actions minutes, Packages (GHCR), Git LFS,
    or Codespaces.
+
+> [!NOTE]
+> This is about **billing, not caution**. Commit, push, pull, fetch, clone, branch,
+> tag, open and merge PRs, cut releases — all free, all allowed, none of it needs
+> asking. The rule says so explicitly, because over-applying it is its own failure
+> mode and no hook can fix an agent being needlessly timid.
 
 Its command patterns are anchored at a *command position*, so writing **about** one of
 them — a doc, a test fixture, a commit message quoting `git lfs` — doesn't trip it.
