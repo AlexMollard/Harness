@@ -79,10 +79,10 @@ safe; every step is idempotent.
 
 | | |
 |---|---|
-| 📜 **Instructions** | 6 core files, 362 lines, read by both harnesses |
+| 📜 **Instructions** | 7 core files, 393 lines, read by both harnesses |
 | 🧠 **Skills** | 8 always indexed, 108 on demand |
 | ⌨️ **Commands** | 3 slash commands, shared |
-| 🪝 **Hooks** | 4, including 2 discovery gates that enforce what instructions can't |
+| 🪝 **Hooks** | 5, including 2 discovery gates and 1 that blocks GitHub billing |
 | ⚙️ **Machine config** | Claude Code settings + hooks, omp config/models/roles |
 | 🔌 **MCP servers** | none, by measurement |
 
@@ -113,6 +113,7 @@ Loaded into every session on both harnesses.
 | `30-gatekeeper.md` | 98 | Two gates — the Interview and the Ponytail ladder |
 | `40-code-discovery.md` | 20 | Using `graphify` when a project has a graph |
 | `50-rtk.md` | 29 | RTK token-optimising CLI proxy |
+| `60-github-billing.md` | 31 | Zero GitHub spend — manual-dispatch workflows only, no metered storage |
 
 > [!TIP]
 > [`AUDIT.md`](AUDIT.md) measures what this costs per session, the contradictions found
@@ -165,12 +166,32 @@ without pushing that onto everyone who clones the repo.
 | `PreToolUse` Bash | `rtk hook claude` | always — routes commands through the RTK proxy |
 | `PreToolUse` Grep/Glob | `graphify-discovery-gate` | `graphify-out/graph.json` exists |
 | `PreToolUse` WebFetch | `context7-docs-gate` | the URL host is a known docs host |
+| `PreToolUse` Write/Edit/Bash | `github-billing-gate` | **blocks** anything that would bill GitHub |
 | `PostToolUse` | telemetry | always |
 
 Both discovery gates share the property that makes a hook survive daily use: **a binary
 trigger, never a guess at intent.** They stay silent everywhere else, never block, and
 exit 0 on malformed input. Add a docs host via `DOCS_HOSTS` in
 [`configs/claude/hooks/context7-docs-gate`](configs/claude/hooks/context7-docs-gate).
+
+### The billing gate is different — it blocks
+
+> [!CAUTION]
+> This account runs at **zero GitHub spend**, and `github-billing-gate` is what makes
+> that a guarantee rather than an intention. It denies the tool call outright.
+
+It stops exactly two things, both objectively checkable:
+
+1. A `.github/workflows` file whose `on:` block names any trigger other than
+   `workflow_dispatch` — or that uploads artifacts or caches, which bill for storage
+   even from a manual run. **A manual-dispatch-only workflow passes**, which is the
+   "explicit or manually run" carve-out.
+2. A command touching a metered surface: Actions minutes, Packages (GHCR), Git LFS,
+   or Codespaces.
+
+Its command patterns are anchored at a *command position*, so writing **about** one of
+them — a doc, a test fixture, a commit message quoting `git lfs` — doesn't trip it.
+A blocking hook that cries wolf is one you learn to disable.
 
 ---
 

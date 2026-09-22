@@ -30,6 +30,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/github-billing-gate",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PostToolUse": [

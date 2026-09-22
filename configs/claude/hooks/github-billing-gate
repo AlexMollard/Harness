@@ -1,0 +1,134 @@
+#!/bin/bash
+# PreToolUse (Write|Edit|Bash): keep GitHub spend at exactly zero.
+#
+# core/60-github-billing.md states the rule; this makes it a guarantee. An
+# instruction is context - Anthropic's own docs say so - and "never bill me" is
+# not something to leave to recall 85 directives into a 380-line preamble.
+#
+# BLOCKS, unlike the discovery gates. Two things only, both objectively checkable:
+#
+#   1. A .github/workflows file whose `on:` block names any trigger other than
+#      workflow_dispatch. A manual-dispatch-only workflow is allowed through -
+#      that is the "explicit or manually run" carve-out.
+#   2. A command that consumes a metered surface: Actions minutes, Packages
+#      (GHCR), Git LFS, or Codespaces.
+#
+# Everything else passes silently. Deny is expressed as PreToolUse JSON
+# (permissionDecision) rather than exit 2, so the reason reaches the model.
+
+set -u
+payload=$(cat 2>/dev/null || true)
+
+deny() {
+  # printf, not echo - the reason contains characters echo -e would mangle.
+  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}\n' "$1"
+  exit 0
+}
+
+if ! command -v python3 >/dev/null 2>&1; then
+  # Without a JSON parser the trigger list cannot be read. Fail CLOSED for
+  # workflow files (the billable case) and open for everything else.
+  case "$payload" in
+    *.github/workflows/*)
+      deny '"Cannot verify workflow triggers: python3 is unavailable. Blocked by core/60-github-billing.md."' ;;
+  esac
+  exit 0
+fi
+
+HOOK_PAYLOAD="$payload" python3 - <<'PY'
+import json, os, re, sys
+
+def deny(reason):
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason": reason}}))
+    sys.exit(0)
+
+try:
+    raw = os.environ.get("HOOK_PAYLOAD", "")
+    d = json.loads(raw) if raw.strip() else {}
+except Exception:
+    sys.exit(0)                      # unparseable input is not our call to block
+
+tool = d.get("tool_name", "")
+ti = d.get("tool_input") or {}
+
+# --- 1. workflow files -----------------------------------------------------
+path = str(ti.get("file_path") or ti.get("path") or "").replace("\\", "/")
+if re.search(r"\.github/workflows/[^/]+\.ya?ml$", path):
+    body = ti.get("content")
+    if body is None:
+        body = ti.get("new_string") or ti.get("new_str") or ""
+    body = str(body)
+
+    # Slice the top-level `on:` block: from the `on:` line to the next line that
+    # begins in column 0. Anchoring this way keeps a step *named* "push" from
+    # matching, because step keys are indented.
+    lines = body.split("\n")
+    start = next((i for i, l in enumerate(lines)
+                  if re.match(r"^on\s*:", l)), None)
+    if start is not None:
+        end = len(lines)
+        for i in range(start + 1, len(lines)):
+            if lines[i][:1] not in (" ", "\t", "", "#"):
+                end = i
+                break
+        block = lines[start:end]
+
+        found = set()
+        inline = re.sub(r"^[^:]*:", "", block[0])            # `on: [push, x]` / `on: push`
+        for t in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", inline):
+            found.add(t)
+
+        # Triggers all sit at ONE indent level under `on:`. Collecting every
+        # nested key instead would read a workflow_dispatch input's own name
+        # (`inputs: -> tag: -> required:`) as if it were a trigger.
+        kids = [l for l in block[1:] if l.strip() and not l.lstrip().startswith("#")]
+        if kids:
+            lvl = min(len(l) - len(l.lstrip()) for l in kids)
+            for l in kids:
+                if len(l) - len(l.lstrip()) != lvl:
+                    continue
+                m = re.match(r"^\s*-?\s*([A-Za-z_][A-Za-z0-9_]*)\s*:?\s*$", l)
+                if m:
+                    found.add(m.group(1))
+
+        auto = sorted(found - {"workflow_dispatch"})
+        if auto:
+            deny("Blocked by core/60-github-billing.md: this workflow triggers "
+                 "automatically on %s, which consumes billable Actions minutes and "
+                 "artifact storage. Only workflow_dispatch (manually run) is allowed. "
+                 "Remove the automatic trigger, or run the job locally instead."
+                 % ", ".join(auto))
+
+    # Uploading artifacts bills for storage even from a manual run.
+    if re.search(r"actions/upload-artifact|actions/cache", body):
+        deny("Blocked by core/60-github-billing.md: artifact and cache storage is "
+             "billable. Keep build output local.")
+
+# --- 2. metered commands ---------------------------------------------------
+if tool in ("Bash", "PowerShell"):
+    cmd = str(ti.get("command") or "")
+
+    # Anchor at a command position - start of line, or after a separator - rather
+    # than matching anywhere. Otherwise merely WRITING about one of these (a test
+    # fixture, a doc, a commit message quoting `git lfs`) trips the block, which
+    # is both maddening and teaches you to disable the hook.
+    CMD = r"(?:^|[;&|(]|\|\||&&)\s*"
+    checks = [
+        (CMD + r"git\s+lfs\b", "Git LFS storage and bandwidth are billable"),
+        (CMD + r"gh\s+workflow\s+enable\b", "enabling a workflow lets it run automatically"),
+        (CMD + r"gh\s+codespace\s+(?:create|edit)\b", "Codespaces compute and storage are billable"),
+        (CMD + r"docker\s+(?:push|build)[^\n;&|]*(?:ghcr\.io|docker\.pkg\.github\.com)", "GitHub Packages storage is billable"),
+        (CMD + r"npm\s+publish\b[^\n;&|]*npm\.pkg\.github\.com", "GitHub Packages storage is billable"),
+        (CMD + r"gh\s+api\b[^\n;&|]*actions/permissions", "this changes Actions enablement"),
+    ]
+    for pat, why in checks:
+        if re.search(pat, cmd, re.M):
+            deny("Blocked by core/60-github-billing.md: %s. This account runs at zero "
+                 "GitHub spend. Use a local equivalent instead." % why)
+
+sys.exit(0)
+PY
+exit 0

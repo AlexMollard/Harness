@@ -119,6 +119,23 @@ try {
     if (-not (Test-Hook 'graphify gate speaks where a graph exists' 'graphify-discovery-gate' "{`"cwd`":`"$jf/withgraph`"}" 'speaks')) { $fail++ }
     if (-not (Test-Hook 'graphify gate silent without one      ' 'graphify-discovery-gate' "{`"cwd`":`"$jf/nograph`"}" 'silent')) { $fail++ }
   }
+  # The billing gate BLOCKS rather than advises, so both directions matter: a
+  # false negative bills the account, a false positive stops legitimate work.
+  if (Test-Path "$HOME/.claude/hooks/github-billing-gate") {
+    # Build these with ConvertTo-Json, never by hand: a newline written as a
+    # literal \n in source becomes a real newline, which is invalid inside a JSON
+    # string. The hook then fails to parse and exits silently - so the "allows"
+    # case passes for entirely the wrong reason.
+    function New-Payload { param($Tool, $In) (@{ tool_name = $Tool; tool_input = $In } | ConvertTo-Json -Compress -Depth 5) }
+    $autoWf = New-Payload 'Write' @{ file_path = 'r/.github/workflows/ci.yml'; content = "on: push`njobs: {}" }
+    $manWf = New-Payload 'Write' @{ file_path = 'r/.github/workflows/m.yml'; content = "on:`n  workflow_dispatch:`njobs: {}" }
+    $lfs = New-Payload 'Bash' @{ command = ('git' + ' lfs track x') }
+    if (-not (Test-Hook 'billing gate blocks an auto workflow ' 'github-billing-gate' $autoWf 'speaks')) { $fail++ }
+    if (-not (Test-Hook 'billing gate allows manual dispatch  ' 'github-billing-gate' $manWf 'silent')) { $fail++ }
+    if (-not (Test-Hook 'billing gate blocks metered storage  ' 'github-billing-gate' $lfs 'speaks')) { $fail++ }
+    if (-not (Test-Hook 'billing gate ignores ordinary work   ' 'github-billing-gate' '{"tool_name":"Bash","tool_input":{"command":"git status"}}' 'silent')) { $fail++ }
+  }
+
   if (Test-Path "$HOME/.claude/hooks/context7-docs-gate") {
     # the hook deliberately says nothing unless the plugin is enabled
     $on = (Get-Content -Raw $sj -EA SilentlyContinue) -match '"context7@claude-plugins-official"\s*:\s*true'
