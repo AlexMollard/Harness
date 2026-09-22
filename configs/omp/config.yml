@@ -1,39 +1,15 @@
-providers:
-  webSearchOrder:
-    - anthropic
-    - codex
-    - zai
-    - xai
-    - perplexity
-    - gemini
-    - exa
-    - tinyfish
-    - jina
-    - kagi
-    - tavily
-    - firecrawl
-    - brave
-    - kimi
-    - parallel
-    - synthetic
-    - searxng
-    - startpage
-    - duckduckgo
-    - ecosia
-    - google
-    - mojeek
-    - public
 modelRoles:
-  plan: anthropic/claude-opus-5:high
+  plan: anthropic/claude-opus-5-5:high
   task: anthropic/claude-sonnet-5:low
   commit: gpustack/qwen3.8-27b-nvfp4:off
-  advisor: anthropic/claude-opus-5:low
+  advisor: anthropic/claude-opus-5-5:low
   tiny: gpustack/qwen3.8-27b-nvfp4:off
-  default: anthropic/claude-opus-5:high
+  default: anthropic/claude-opus-5-5:high
   smol: gpustack/qwen3.8-27b-nvfp4:off
-  slow: anthropic/claude-opus-5:max
+  slow: anthropic/claude-opus-5-5:max
   vision: anthropic/claude-sonnet-5:medium
-  SeriousBuisness: anthropic/claude-fable-5-1:low
+  SeriousBuisness: anthropic/claude-opus-5-5:max
+  web: anthropic/claude-haiku-4-5
 symbolPreset: nerd
 composer:
   shape: band
@@ -83,3 +59,33 @@ branchSummary:
 defaultThinkingLevel: auto
 compaction:
   thresholdTokens: 500000
+retry:
+  fallbackChains:
+    web:
+      - openai-codex/gpt-5.6-luna
+      - web/zai
+      - xai/grok-4.5
+      - web/perplexity
+      - google/gemini-2.5-flash
+      - web/exa
+      - web/tinyfish
+      - web/jina
+      - web/kagi
+      - web/tavily
+      - web/firecrawl
+      - web/brave
+      - web/kimi
+      - web/parallel
+      - web/synthetic
+      - web/searxng
+      - web/startpage
+      - web/duckduckgo
+      - web/ecosia
+      - web/google
+      - web/mojeek
+      - web/public
+      - google-antigravity/gemini-2.5-flash
+      - openai-codex/gpt-5.6
+      - openai-codex/gpt-5.5
+      - xai-oauth/grok-4.5
+      - web/ollama

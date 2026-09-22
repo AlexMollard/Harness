@@ -133,9 +133,9 @@ omp's roles are assigned from what the machine can actually reach, per
 
 | Role | Default | With `ZAI_API_KEY` |
 |---|---|---|
-| `plan` | `claude-opus-5:high` | `glm-5.3-flash:high` |
+| `plan` | `claude-opus-5-5:high` | `glm-5.3-flash:high` |
 | `task` | `claude-sonnet-5:low` | `glm-5.3-flash:low` |
-| `advisor` | `claude-opus-5:low` | `glm-5.3-flash:low` |
+| `advisor` | `claude-opus-5-5:low` | `glm-5.3-flash:low` |
 | `smol` | `qwen3.8-27b-nvfp4:off` | `glm-5.3-flash:low` |
 
 `commit`, `tiny`, `default`, `slow`, `vision` and `SeriousBuisness` are untouched.

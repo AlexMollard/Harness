@@ -18,9 +18,9 @@
 
   # Always applied. Works with no credentials beyond an Anthropic login.
   base     = @{
-    plan    = 'anthropic/claude-opus-5:high'
+    plan    = 'anthropic/claude-opus-5-5:high'
     task    = 'anthropic/claude-sonnet-5:low'
-    advisor = 'anthropic/claude-opus-5:low'
+    advisor = 'anthropic/claude-opus-5-5:low'
     smol    = 'gpustack/qwen3.8-27b-nvfp4:off'
   }
 
