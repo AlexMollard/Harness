@@ -1,6 +1,6 @@
 ---
 name: scrub-path-from-local-history
-description: "Remove a file or directory from unpushed local commits so it never appears in history, by rebuilding the branch with cherry-picks and verifying with patch/message/tree scans"
+description: "Use when a file or directory committed by mistake (a spike, an orphaned tool, a leaked file) must vanish from local commits that are unpushed or pushed only to your own branch, so history reads as if it never existed rather than deleting it going forward."
 ---
 
 # Scrub a path from local history
@@ -9,10 +9,13 @@ Use when work committed locally (not pushed, or pushed only to a personal branch
 
 Safe only for **unpushed or personally-owned** branches. A shared branch needs the team's agreement first, because everyone building on it must reset.
 
+If the branch was pushed and the path held a secret, or GitHub must show no trace of the rewrite, see `git-history-scrub`.
+
 ## 1. Map the footprint before touching anything
 
 ```bash
 git branch backup/with-<thing> HEAD          # always, first
+git rev-parse origin/<branch>                # if it was pushed: the lease value for step 4
 git log --reverse --format="%h %s" <base>..HEAD
 ```
 
@@ -72,13 +75,13 @@ Grep patterns lie: search for a distinctive substring, not a full sentence, beca
 
 ## 4. Build, then push
 
-Rewriting can leave a tree that differs subtly from what was last tested. Build every affected project again, then:
+Rewriting can leave a tree that differs subtly from what was last tested. Build every affected project again. Never-pushed commits need only a plain `git push`. For a pushed branch, pin the lease to the SHA recorded in step 1 (not `backup/with-<thing>`, which may be ahead of the remote):
 
 ```bash
-git push --force-with-lease
+git push --force-with-lease=<branch>:<recorded-sha> origin <branch>
 ```
 
-`--force-with-lease`, never `--force`: it refuses if someone else pushed to the branch meanwhile.
+Never `--force` or a bare `--force-with-lease`: git 2.54's docs call the unpinned forms experimental, and a background fetch defeats them. The pinned form refuses if someone else pushed meanwhile.
 
 ## Keep the backups
 
