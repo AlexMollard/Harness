@@ -1,6 +1,6 @@
 ---
 name: antfarm-webui-command-verify
-description: "Diagnose and prove fixes for AntFarm dashboard command bugs (toasts like \"missing argument(s): ticket_id\", buttons that silently do nothing) — arg-contract tracing, dist rebuild, colony restart on Windows, and browser payload capture that never mutates live tickets. Use when a D:/NightSmith dashboard action misbehaves."
+description: "Use when a D:/NightSmith AntFarm dashboard button or action misbehaves: a toast like 'missing argument(s): ticket_id', a button that silently does nothing or acts on the wrong ticket, or before proving a dashboard command fix without touching live tickets."
 ---
 
 # AntFarm web UI command verification
@@ -8,8 +8,9 @@ description: "Diagnose and prove fixes for AntFarm dashboard command bugs (toast
 For bugs in the D:/NightSmith dashboard's *command* path: a toast error, a button
 that queues nothing, an action that applies to the wrong thing.
 
-Complements `antfarm-colony-ops` (run/restart/test baseline). This one is only
-about the browser → API → supervisor command contract.
+Only the browser → API → supervisor command contract lives here. Running,
+restarting and the test baseline are `antfarm-colony-ops`; a dashboard that says
+"Failed to fetch" means nothing is listening, which is that skill too.
 
 ## The contract, end to end
 
@@ -61,19 +62,10 @@ FAILED, restore, expect green.
 
 ## Make the fix actually reachable
 
-Both steps are required and both are easy to forget:
-
-```bash
-cd antfarm/webui/frontend && npm run build     # dist/ is what the server serves
-```
-Server-side changes to `_ARG_ALLOW` live in the **running process's memory** —
-the dashboard is served by the supervisor. Restart it or you will verify the old
-code. On Windows `nohup` silently fails to detach; use:
-
-```bash
-cmd /c "start /B .venv\Scripts\python.exe main.py --ui > .antfarm\ui-restart.log 2>&1"
-sleep 30 && rtk read .antfarm/run.lock      # confirm a NEW pid
-```
+Both steps are required and both are easy to forget: rebuild `dist/` for a
+frontend change and restart the colony for a server-side one (`_ARG_ALLOW` lives
+in the **running process's memory**), or you verify the old code. Commands and
+the new-pid check: `antfarm-colony-ops`.
 
 ## Prove it without mutating live data
 

@@ -1,12 +1,14 @@
 ---
 name: antfarm-colony-ops
-description: "Run, restart, and verify the AntFarm colony at D:/NightSmith after code changes — correct interpreter, run.lock handling, dashboard checks, and the known-failing test baseline. Use when editing antfarm/ code, when the dashboard says \"Failed to fetch\", or when attributing pytest failures in this repo."
+description: "Use when restarting or checking the D:/NightSmith AntFarm colony after an antfarm/ code change, when its dashboard says 'Failed to fetch', or when judging if a pytest failure there is pre-existing. Also when .antfarm/run.lock looks stale or the dashboard will not load."
 ---
 
 # AntFarm colony ops (D:/NightSmith)
 
 Repo-specific operational facts learned the hard way. Applies to the AntFarm
 colony: supervisor loop + `queen` CLI + web dashboard on `127.0.0.1:8770`.
+For dashboard *command* bugs (toasts, buttons that do nothing), use
+`antfarm-webui-command-verify`.
 
 ## Interpreter
 
@@ -26,14 +28,22 @@ non-interactive/PTY shell: its `rem` comment lines get fed back to `cmd.exe`
 as literal commands (`'tarts' is not recognized...`). Launch it by hand, or use
 the venv interpreter directly from a script.
 
+## Windows switches from Git Bash
+
+MSYS rewrites a single-slash switch into a path, so from Git Bash double it:
+`tasklist //FI`, `taskkill //PID <pid> //F`, `cmd //c`. The single-slash forms
+fail with `ERROR: Invalid argument/option - 'C:/Program Files/Git/FI'`, or, for
+`cmd /c`, print the cmd banner and run nothing (verified 2026-09-24). Single
+slashes are right only in cmd or PowerShell.
+
 ## Is it actually running?
 
 "Cannot reach the dashboard server — TypeError: Failed to fetch" almost always
 means *nothing is listening*, not a code regression. Check in this order:
 
-```
-netstat -ano | findstr :8770        # LISTENING + pid, or nothing
-tasklist /FI "PID eq <lock pid>"    # is the run.lock pid even alive?
+```bash
+netstat -ano | findstr :8770         # LISTENING + pid, or nothing
+tasklist //FI "PID eq <lock pid>"    # is the run.lock pid even alive?
 curl -sS -i http://127.0.0.1:8770/api/overview
 ```
 
@@ -43,20 +53,38 @@ Then read `.antfarm/heartbeat.json` (`pid`, `cycle`, `uptime_s`) and the newest
 ## run.lock needs no cleanup
 
 `.antfarm/run.lock` holding a **dead** pid is not a blocker. `runlock.read()`
-returns `None` when `_pid_alive(pid)` is false, so `acquire()` takes it. Never
-delete it manually; never propose "clear the stale lock" as a fix.
+returns `None` when `_pid_alive(pid)` is false, so `acquire()` takes it. A clean
+stop removes the file (`main.py` calls `runlock.release`, which deletes only its
+own pid's lock); a kill leaves the dead pid behind, harmlessly. Never delete it
+manually; never propose "clear the stale lock" as a fix. (verified 2026-09-24)
 
 ## Restarting after a code change
 
+The dashboard is served by the supervisor, so a server-side change is invisible
+until the colony restarts. A frontend change also needs a rebuild, because
+`dist/` is what the server serves:
+
+```bash
+cd antfarm/webui/frontend && npm run build
+```
+
 1. Read `.antfarm/run.lock` and check whether that pid is alive — **never start
    a second colony**.
-2. If live, stop it. `queen stop` is acked immediately but cannot abort an
-   LLM call already streaming; if it is mid `streaming:planner` it may need
-   `taskkill /PID <pid> /F`. `reconcile_interrupted()` cleans up the open
-   episode on the next start.
+2. If live, stop it: `.venv/Scripts/python.exe -m antfarm.queen_cli stop`. It is
+   acked immediately but cannot abort an LLM call already streaming; if it is
+   mid `streaming:planner` it may need `taskkill //PID <pid> //F`.
+   `reconcile_interrupted()` cleans up the open episode on the next start.
 3. Start detached with the venv interpreter, leave it running and unpaused.
+   `nohup` silently fails to detach on Windows; this `cmd //c` form detached a
+   test process when checked on 2026-09-24:
+
+   ```bash
+   cmd //c "start /B .venv\Scripts\python.exe main.py --ui > .antfarm\ui-restart.log 2>&1"
+   sleep 30 && rtk read .antfarm/run.lock      # must show a NEW pid
+   ```
 4. Prove it: `netstat` LISTENING + `curl /api/overview` 200 + heartbeat pid
-   matches the new `run.lock`.
+   matches the new `run.lock`. The new pid is the proof, not the launch
+   command's exit code.
 
 ## Known-failing test baseline
 

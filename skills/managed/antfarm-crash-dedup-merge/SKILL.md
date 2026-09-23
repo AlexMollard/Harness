@@ -72,9 +72,9 @@ before = dedupe.groups(Store(tmp, log), log)
    timestamped occurrence bundles into the canonical folder, merges `info.md` (combining the
    `## Machines` table and updating `*First seen:*`) and removes the emptied duplicate folders.
    Variants: `--tickets-only` (no share writes), `--group HANDBALL-176`, `--undo BATCH_ID`.
-5. **Restart** — `cmd /c "start /B .venv\Scripts\python.exe main.py --ui > .antfarm\ui-restart.log 2>&1"`
-   — and verify the churn is closed: **total ticket count and `max(created_at)` must be
-   unchanged**. A rise means the identity pin is not being written or read.
+5. **Restart** the colony detached, as in `antfarm-colony-ops` (from Git Bash use `cmd //c`;
+   single-slash `cmd /c` runs nothing) — and verify the churn is closed: **total ticket count and
+   `max(created_at)` must be unchanged**. A rise means the identity pin is not being written or read.
 6. Expect `/api/duplicates` to report 0 groups.
 
 Undo log is `.antfarm/crash-merge-undo.jsonl` — local on purpose, because the share may be down
@@ -102,5 +102,5 @@ top = [p for p in rmdirs if p.parent == share]   # the rest are another project
 
 ## Interpreter
 
-`.venv/Scripts/python.exe`. A bare `python` dies with `ModuleNotFoundError: No module named 'yaml'`
-before it ever binds a port — a silent-looking failure when launching the dashboard.
+`.venv/Scripts/python.exe`, never a bare `python`; why a bare one fails silently is in
+`antfarm-colony-ops`.
