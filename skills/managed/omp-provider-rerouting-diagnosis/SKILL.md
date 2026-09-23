@@ -6,7 +6,7 @@ description: "Use when rerouting omp models through a proxy, proving which defin
 # omp provider rerouting — what works, what doesn't, and how to prove it
 
 Verified against omp v18.1.16 (2026-09-10, D:/NightSmith workstation user); the
-`ANTHROPIC_BASE_URL` and debug-log facts against v18.2.9 (2026-09-23).
+`ANTHROPIC_BASE_URL`, models.yml and debug-log facts against v18.2.9 (2026-09-23).
 
 ## Hard constraints (all URL/registry-level proven)
 
@@ -16,7 +16,7 @@ Verified against omp v18.1.16 (2026-09-10, D:/NightSmith workstation user); the
 - Per-model `baseUrl` in a registered model def **is honored** (`Hke`: `baseUrl: u.baseUrl ?? providerBaseUrl`) — but **only for ids the built-in catalog doesn't already have**. Same-id overrides lose to the built-in def on the inference path (models.yml same-id models and runtime registerProvider overlays alike).
 - Copy `compat` **verbatim** from the bundle. The request layer reads non-schema compat keys directly off the model def (`zaiReasoningEffortDialect`, `clampOutputToModelMax`, `officialEndpoint`, `supportsSamplingParams`, `nativeKimiK3Reasoning`, …). Filtering to the models.yml `OpenAICompatFields` schema silently changes request behavior. `registerProvider` does no compat-key validation (manual checks in `b6e` only).
 - Strip only true junk fields: `provider`, `int`, `tps`, `identity`, `requiresGlyphTokenization`, `supportsComputerUse`.
-- models.yml schema: model entries accept `baseUrl` and `headers`; `modelOverrides` accepts `headers` but NOT `baseUrl`. Unknown keys silently drop the WHOLE provider, so run `omp models find <id>` after every edit. A provider with a `models:` array needs provider-level `baseUrl` AND `apiKey`, and a models.yml `apiKey:` is a literal (env-var names resolve in `registerProvider`, not here).
+- models.yml: `modelOverrides` accepts `headers` but no `baseUrl` (`ModelOverrideSchema`), so an override can never reroute a model. A file that fails validation disables every custom provider (`models.yml validation failed — custom providers disabled`), so run `omp models find <id>` after every edit. For the rest of the models.yml shape, including `apiKey` env-var names, see `omp-openai-compatible-provider`.
 - `--config` overlays are settings-style and silently do nothing for provider blocks. models.yml/config.yml edits need a NEW omp process; a running session keeps its startup snapshot.
 - `--no-extensions` disables extension-discovered extensions (explicit `-e` still loads). Verify which flag a run needs before believing any test result.
 
