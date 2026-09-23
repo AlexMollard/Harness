@@ -67,7 +67,9 @@ real data once per invariant and confirm the *matching* assertion fires:
 - typo one enum string → enum test
 - point a parent at its own child → loop test prints the path
 
-Restore from a `.kt.bak` copy in the same command, and re-run the gate after.
+Commit first, then revert each mutation with `git checkout -- <file>` in the same command (a `.bak`
+copy can be deleted mid-run) and re-run the gate after; mutation mechanics are in
+`gradle-mutation-proof-regression-test`.
 
 ## Traps
 

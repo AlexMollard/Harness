@@ -1,6 +1,6 @@
 ---
 name: gradle-mutation-proof-regression-test
-description: "Prove a new Gradle/Android test (unit or instrumented) actually catches the bug it claims, without vacuous greens — covers the stale androidTest-results XML trap that makes a failed compile read as a pass, and line-anchored source mutation when regex excision decapitates the enclosing function. Use after adding a regression test, or when a mutation \"passes\" suspiciously fast."
+description: "Use when proving a new Gradle/Android test (unit/instrumented) catches its bug, or a mutation passes suspiciously fast, a failed compile reads as green, or a mutation edit breaks untouched helpers."
 ---
 
 # Mutation-proving a Gradle/Android regression test
@@ -11,7 +11,7 @@ traps make this go wrong silently.
 
 ## Trap 1 — stale results XML reads as a pass
 
-`connectedDebugAndroidTest` / `testDebugUnitTest` leave their XML behind. If the
+`connectedFossDebugAndroidTest` / `testFossDebugUnitTest` leave their XML behind. If the
 mutated build **fails to compile**, the task never runs and the previous run's
 XML is still on disk — so a parse of it reports the old `failures="0"` and the
 mutation looks survived-by-a-green-test.
@@ -31,6 +31,16 @@ for f in xs:
     for m in re.findall(r'<failure[^>]*>(.{0,260})', t, re.S): print('  CAUGHT:', m.strip().splitlines()[0][:260])
 "
 ```
+
+Unit tests write `app/build/test-results/testFossDebugUnitTest/TEST-<class>.xml`; run
+the same check there. A filtered run (`--tests '*XTest*'`) leaves every earlier XML in
+place, so unlink the matching result files first. The trap is live on D:/Monarch:
+pre-flavour `connected/debug/TEST-*.xml` and `test-results/testDebugUnitTest/` still
+sit beside the flavoured results (seen 2026-09-24), and a recursive glob reads them.
+
+Instrumented suites are destructive, so run them on the emulator only:
+`ANDROID_SERIAL=emulator-5554 ./gradlew :app:connectedFossDebugAndroidTest`
+(see `android-physical-phone-safe-verify`).
 
 Also scan build output for `^e:` (Kotlin errors) alongside `FAILED`/`BUILD SUCCESS`.
 A compile error in the *mutation* is a no-op run, not evidence.
@@ -81,16 +91,18 @@ Re-run the mutation after tightening, to confirm the new message is what fires.
 ## Sequence
 
 1. `rm -rf` results -> run baseline -> green
-2. Apply one compiling, line-anchored mutation
+2. Commit the fix and the test, then apply one compiling, line-anchored mutation
 3. Run; confirm XML count is 1 and the **expected** assertion fired
-4. Restore from the `.bak`, re-run, confirm green and `git status` clean
+4. Revert with `git checkout -- <file>` (lossless against the commit; a `.bak` copy can be
+   deleted by a cleanup `rm` mid-run), assert the source is byte-identical, re-run, confirm
+   green and `git status` clean
 5. Report which mutations were compiler-refused vs behaviourally caught
 
 ## Ground the test in the real API first
 
 Write instrumented tests against symbols confirmed by reading the repository /
-DAO interfaces, not recalled ones; the first `assembleDebugAndroidTest` will
+DAO interfaces, not recalled ones; the first `assembleFossDebugAndroidTest` will
 list every invented name. Instrumented tests must open an **isolated database
-file** (`MonarchDatabase.create(context, TEST_DB)`), never the live one — a test
-deleting the app's live DB under a running Room instance produces
-`no such table` failures that look like schema bugs.
+file** (`IronvellumDatabase.create(context, TEST_DB)`), never the live one. For the
+live-database `no such table` trap and Ironvellum's real Repository/DAO surface, see
+`monarch-data-layer-instrumented-tests`.
