@@ -1,12 +1,17 @@
 ---
 name: lore-stuck-merge-recovery
-description: "Clear a stuck or unrecoverable Lore merge in an AntHill workspace when resolve/abort/restart all fail with \"Invalid merge type\" at merge.rs:303, or when the client's conflict panel offers buttons that do nothing. Use when a workspace shows \"Changes in conflict\", \"merge waiting to be committed\", or when Lore integration tests fail on leftover fixture state."
+description: "Use when a Lore merge is stuck: Invalid merge type at merge.rs:303 from resolve/abort/restart, AntHill conflict panel buttons doing nothing, Changes in conflict, or a merge waiting to be committed. Also when the client refuses to fetch or switch branch until a merge is sent back."
 ---
 
 # Recovering a stuck Lore merge
 
 A workspace stuck in conflict has **two distinct causes** that look identical in the UI.
 Diagnose first: the fixes are different and one is destructive.
+
+If the workspace is one an `AntHill.Lore.Tests` test names (not one in the client's
+`workspaces.json`), or you will re-run that suite afterwards, read `anthill-test-environment`
+first: some fixtures hold a merge on purpose, the suite needs the Lore server up, and a running
+client or dashboard locks the build.
 
 ## Diagnose
 
@@ -37,8 +42,9 @@ the wrong command:
   at lore-revision\src\branch\merge.rs:303:1
 ```
 
-Note `status`, `history` and `revision info --metadata` still succeed — only the
-merge record is unreadable. Do not conclude the repository is broken.
+Note `status`, `history` and `revision info --metadata` still succeed — only the merge
+record, a structure separate from the revision metadata, is unreadable. Do not conclude the
+repository is broken.
 
 ## Corrupt merge state
 
@@ -58,10 +64,11 @@ Rules:
 
 - Use `unstage`, never `reset`. `reset` overwrites the working file with the
   repository version and **destroys local edits**.
-- Unstage the remaining *staged* changes too. `WorkspaceOperations.StatusAsync`
-  computes `merging` from `FlagMerged || FlagConflict || FlagStaged`, so any
-  staged file keeps the client reporting "a merge waiting to be committed" and
-  blocks fetches even after the conflicts are gone.
+- Unstage the remaining *staged* changes too. `WorkspaceOperations.StatusAsync` sets
+  `MergeInProgress` when any staged file is flagged `FlagMerged` or `FlagConflict`, and fetch
+  and branch switch refuse with "a merge waiting to be committed" while it is set, so a
+  merged-but-staged file keeps blocking after the conflicts are gone. Ordinary staged work
+  stopped counting in 5c4ed71 (2026-09-10; verified 2026-09-24).
 - The corrupt blob still exists afterwards; merge commands keep failing. That is
   fine — with nothing conflicted or staged, nothing calls them.
 
@@ -75,26 +82,3 @@ lore --repository <ws> -P branch merge abort
 ```
 
 Expect `Merge abort reverted changes` and exit 0.
-
-## Test fixtures are separate workspaces
-
-`AntHill.Lore.Tests` integration tests do **not** use the client's registered
-workspace. Leftover state in a fixture directory (e.g. `branch-cricket26`,
-`branch-main` beside `artist`) fails tests with:
-
-```
-There is a merge waiting to be committed in <branch>. Send it back first
-```
-
-Clear the *fixture* workspace, not the artist one. Some fixtures are built by the
-tests themselves, so a residual failure after cleaning the on-disk fixtures is
-likely pre-existing and not caused by your change — attribute before chasing.
-
-## Gotchas
-
-- The Lore server must be running or ~47 tests silently **skip**; a suite that
-  reports "50 passed" may be testing half of what you think. Check the port
-  before trusting any Lore test result.
-- A running client or dashboard locks its own DLLs; builds then fail with
-  MSB3026/MSB3027/CS2012. That is a lock, not a compile error — check for
-  `error CS` before believing a non-zero exit.
