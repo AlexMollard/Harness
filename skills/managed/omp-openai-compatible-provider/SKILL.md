@@ -1,6 +1,6 @@
 ---
 name: omp-openai-compatible-provider
-description: "Wire a self-hosted OpenAI-compatible LLM endpoint (GPUStack, vLLM, LiteLLM, LM Studio) into omp as a custom models.yml provider — capability probing, internal-CA TLS chains, and role reassignment. Use when asked to use a LAN/self-hosted/local model in omp, or when omp turns fail with \"unable to get local issuer certificate\"."
+description: "Use when adding a LAN or self-hosted OpenAI-compatible model (GPUStack, vLLM, LiteLLM, LM Studio) to omp or its roles, or 'unable to get local issuer certificate' or 'models.yml validation failed'."
 ---
 
 # Wiring a self-hosted OpenAI-compatible endpoint into omp
@@ -33,7 +33,7 @@ Run against the real endpoint. Each probe maps to a config field:
 | chat with a `tools[]` + `tool_choice: auto` | `supportsTools`; measure latency here too |
 | chat with `chat_template_kwargs: {enable_thinking: false}` | `thinking.requiresEffort: false` (only if reasoning comes back null/empty) |
 | chat with `chat_template_kwargs: {reasoning_effort: "low"\|"high"}` | `compat.qwenTemplateReasoningEffort`; compare CoT length to confirm it's honored |
-| streaming chat, collect `delta` keys | `compat.reasoningContentField` (`reasoning` vs `reasoning_content`) |
+| streaming chat, collect `delta` keys | `compat.reasoningContentField` (`reasoning`, `reasoning_content` or `reasoning_text`) |
 | chat with an inline `image_url` data URI | `input: [text, image]` — generate a solid-color PNG and ask its color; a 200 alone proves nothing |
 
 ## 3. Internal CA: the leaf-only chain trap
@@ -47,7 +47,7 @@ AIA; Bun/Node cannot. The CA is not necessarily missing from the Windows store.
 Fix — export the CA chain and point `NODE_EXTRA_CA_CERTS` at it:
 
 1. `TcpClient` + `SslStream` to grab the leaf, then `X509Chain.Build()` (Windows does
-   the AIA fetch) — see script pattern below.
+   the AIA fetch).
 2. Write every chain element **except the leaf** as PEM to `~/.omp/agent/certs/<name>.pem`.
 3. `setx NODE_EXTRA_CA_CERTS "%USERPROFILE%\.omp\agent\certs\<name>.pem"`.
 
@@ -68,7 +68,7 @@ pass from cache while inference fails — test an actual completion, not just `m
 providers:
   <provider-id>:
     baseUrl: https://host/<openai-surface>
-    apiKey: SOME_API_KEY      # env var NAME first, literal fallback
+    apiKey: SOME_API_KEY      # env var NAME, else used literally; "!cmd" runs a command
     api: openai-completions   # openai-responses only if /v1/responses exists
     authHeader: true
     discovery:
@@ -84,7 +84,7 @@ providers:
         tokenizer: qwen3
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
         thinking:
-          mode: effort        # REQUIRED — omitting it fails schema validation
+          mode: effort        # REQUIRED, and so is efforts
           efforts: [minimal, low, medium, high]
           defaultLevel: low
           requiresEffort: false
@@ -95,9 +95,13 @@ providers:
 
 Gotchas:
 
-- `thinking.mode` is **mandatory** (`effort`|`budget`|`google-level`|`anthropic-adaptive`|`anthropic-budget-effort`).
-  Omit it and omp prints `models.yml validation failed — custom providers disabled` and drops
-  the whole file — every custom provider, not just the broken one.
+- Any validation error disables the **whole file**. omp prints
+  `models.yml validation failed — custom providers disabled` and drops every custom
+  provider, not just the broken one. Run `omp models find <provider>` after every edit.
+- `thinking.mode` is **mandatory**
+  (`effort`|`budget`|`google-level`|`anthropic-adaptive`|`anthropic-budget-effort`), and so
+  is `thinking.efforts` (legacy `levels` or `minLevel`+`maxLevel` also pass). Schema verified
+  against omp v18.2.11 source, 2026-09-24.
 - `modelOverrides` are re-applied *after* discovery, so discovery + overrides compose:
   new deployments appear automatically, pinned ids keep corrected metadata.
 - Prefer discovery over hand-listed `models:` — the cluster's deployments change.
