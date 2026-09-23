@@ -45,17 +45,18 @@ python tools/art_batches/run.py tools/art_batches/<batch>.txt [outdir]
 
 Batch line format `id|subject`; the shared style suffix lives in a `# SUFFIX:`
 comment so each prompt stays in version control beside its art. The runner skips
-ids whose PNG already exists and stops with a named reason.
+ids whose PNG already exists and stops with a named reason, so a rerun after the
+reset finishes the set instead of redrawing it.
 
 ## Trap 1: the paper film
 
 `--alpha` keys by **density** (`ink_to_alpha`): ink darkness becomes opacity, and
 blank paper is not perfectly white, so it lands at **alpha 3–24 instead of 0** —
-measured on shipped art at **78–91% of the canvas**. Invisible when you view the
-PNG alone; on the app's near-black panel (`Abyss = 0xFF0C0C0B`) it is a clearly
-visible lighter rectangle the exact size of the image. Three pieces shipped that
-way and the owner caught it on a real phone ("I can see the bg of it against the
-dark bg").
+measured on shipped art at **78–91% of the canvas** (one piece: a light wash of
+RGB 232,232,228 at alpha 7–17). Invisible when you view the PNG alone; on the
+app's near-black panel (`Abyss = 0xFF0C0C0B`) it is a clearly visible lighter
+rectangle the exact size of the image. Three pieces shipped that way and the
+owner caught it on a real phone ("I can see the bg of it against the dark bg").
 
 `cut_paper_film()` now removes it at source inside `postprocess()`: a soft knee
 (alpha ≤ 20 → 0, ramp to 40, unchanged above), chosen from the histogram's clean
@@ -74,14 +75,22 @@ print(f"zero={100*h[0]/tot:.1f}%  film3-24={100*sum(h[3:25])/tot:.1f}%  ink>=41=
 - **film > 5%** → the wash is still there, whatever the tool reported.
 - Healthy output: film ≈ 0–3%, zero ≈ 75%+, ink 5–25%.
 
-To rescue **already-shipped** art, apply the same LUT to the PNG in place and
-confirm the stroke pixel count (alpha ≥ 41) is unchanged.
+To rescue **already-shipped** art, apply the same LUT to the PNG in place, then
+confirm the corner-alpha mean is ~0 and the stroke pixel count (alpha ≥ 41) is
+unchanged:
+
+```python
+LOW, HIGH = 20, 40   # cut_paper_film() defaults
+lut = [0 if v <= LOW else (v if v >= HIGH else round(HIGH*(v-LOW)/(HIGH-LOW))) for v in range(256)]
+im.putalpha(im.split()[3].point(lut)); im.save(path)
+```
 
 ## Trap 2: the model draws its own frame
 
 Generated pieces routinely include a faint sketched rectangle in the margin —
-the same "box against the dark background" by another route. Crop ~7% off each
-edge before shipping, then re-check the histogram:
+the same "box against the dark background" by another route. Keep "no frame, no
+border" in the prompt, and still crop ~7% off each edge before shipping, then
+re-check the histogram:
 
 ```python
 m = int(min(w, h) * 0.07); im = im.crop((m, m, w - m, h - m)).resize((512, 512))
@@ -98,7 +107,9 @@ composite onto `(12,12,11)` before deciding.
 ## Wire and verify
 
 - **Never half-wire a catalogue.** 4 drawn crests beside 6 procedural ones looks
-  worse than either set. Generate the full set, then wire.
+  worse than either set. Generate the full set, then wire. If the quota dies
+  part-way, leave the set unwired and record its status in the batch file's
+  `# STATUS:` header.
 - Empty states take `Image(painterResource(R.drawable.art_empty_*),
   contentDescription = null, modifier = Modifier.size(...).alpha(0.55f))` at an
   explicit `.size(...)` — `fillMaxWidth` + `heightIn` lets the intrinsic size win

@@ -68,7 +68,8 @@ Ironvellum (formerly Monarch, `D:\Monarch`) specifics are at the end.
 - Text entry: `input tap <field>`, `sleep 2`, THEN `input text "..."` (typing races focus);
   `input keyevent 111` (ESC) dismisses the IME between fields.
 - Dumps often omit Compose field values and can be stale (check the byte size changes) — confirm
-  state with a screenshot, not the dump.
+  field values with a screenshot, not the dump. Read `enabled`/`selected`/`checked` off the
+  clickable ancestor, not the label node: `compose-control-tap-verification`.
 
 ## Screenshot proof
 

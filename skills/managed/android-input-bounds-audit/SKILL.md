@@ -1,6 +1,6 @@
 ---
 name: android-input-bounds-audit
-description: "Audit an Android/Compose app's user-input trust boundaries for missing bounds — numeric fields checked only for positivity that poison derived maths (negative lean mass, negative BMR), text fields with no cap, and client caps that must match server CHECK constraints — then prove each gate on device by reading the clickable ancestor's enabled state. Use when adding any typed input, before shipping a form, or when a derived metric can show an absurd value without crashing."
+description: "Use when adding a typed input or form field to an Android/Compose app, before shipping a form, when a derived metric (lean mass, BMR) can show a negative or absurd value without crashing, or when a numeric field is only checked for positivity or a text field has no length cap."
 ---
 
 # Android input bounds audit
@@ -55,47 +55,21 @@ object exists to prevent.
 
 ## 4. Client caps must equal server CHECK constraints
 
-Parse the migrations and assert against the shared constants, so a tightened
-constraint fails a test instead of a sync that dies forever inside
-`runCatching`:
+Pin them with the migration-reading unit test in `wire-name-schema-drift-guard`
+(its limits axis, mutation-proved from both sides). Patterns that match the two
+constraint shapes:
 
 ```kotlin
 Regex("""char_length\((?:trim\()?$column\)?\)\s*<=\s*(\d+)""")
 Regex("""char_length\(trim\($column\)\)\s*between\s*(\d+)\s*and\s*(\d+)""")
 ```
 
-Mutation-prove from the *server* side: tighten a ceiling in the SQL and confirm
-the test names that column.
+## 5. Prove each gate on device
 
-Watch for the false alarm: two similarly-named fields may be different columns
-(a device-local profile name vs the cloud handle). Trace what the push actually
-sends before calling it a mismatch.
-
-## 5. Prove the gate on device — read the RIGHT node
-
-`enabled` sits on the **clickable ancestor**, not on the button's text node,
-which reports `enabled="true"` regardless. Same trap as `selected` on segmented
-controls. Walk the ancestor chain:
-
-```python
-root = ET.fromstring(dump); parents = {c: p for p in root.iter() for c in p}
-for n in root.iter("node"):
-    if n.get("text") == "LOG IT":
-        cur = parents.get(n)
-        while cur is not None:
-            if cur.get("clickable") == "true": print(cur.get("enabled")); break
-            cur = parents.get(cur)
-```
-
-Drive a table of cases and require both directions — a gate that is always
-disabled passes a one-sided check:
-
-| entry | expect |
-|---|---|
-| empty required field | disabled |
-| valid value | enabled |
-| absurd value | **disabled** |
-| valid again | enabled |
+Read `enabled` off the clickable ancestor, never the button's text node, and
+drive the case table in both directions — an absurd value must read
+**disabled**, and a gate that is always disabled passes a one-sided check — per
+`compose-control-tap-verification`.
 
 ## 6. Record what you deliberately left unbounded
 

@@ -1,12 +1,17 @@
 ---
 name: android-adaptive-icon-from-generated-art
-description: "Turn one generated emblem into a complete Android adaptive launcher icon and prove it on a real launcher — covers the 66% safe zone that silently eats edge-to-edge art, the monochrome layer whose colour is meaningless, the unkeyed-slab and sketch-frame traps, and resuming a batch under an image quota that dies mid-run. Use when replacing an app icon with model-generated art, or when an icon looks cropped or blank on device."
+description: "Use when replacing an Android app's launcher icon with model-generated art, or when an adaptive icon looks cropped, blank, boxed or crossed by a stray arc on a real launcher, or themed or old launchers show a default icon instead."
 ---
 
 # Adaptive launcher icon from generated art
 
 One keyed PNG becomes ~20 files. The traps are all silent: the icon still
-builds, installs and launches while being wrong.
+builds, installs and launches while being wrong. Generate the emblem itself with
+`monarch-art-generation`, which owns the resumable batch runner under the image
+quota and the rule against wiring a half-drawn set.
+
+In Ironvellum, `python tools/icon_install.py <png>` (`--dry-run` to preview)
+writes all 20 files under the rules below and refuses unkeyed or empty sources.
 
 ## What the manifest actually references
 
@@ -44,16 +49,14 @@ Two checks, both cheap, both catch a real failure:
   removed — the icon will be a rectangle. Refuse.
 - **Empty source**: max alpha 0. Refuse.
 
-Density-keyed art often also carries a **paper film** at alpha 3-24 across the
-whole canvas: clear corners and low opaque coverage both pass a naive check
-while the icon shows a faint box. Measure the alpha histogram, cut below the
-gap with a soft knee.
+A density-keyed source can also carry a faint paper film that passes both checks
+and shows as a box on the launcher — measure and cut it per
+`monarch-art-generation` (Trap 1).
 
 ## Generated art carries its own frame
 
-Image models draw a sketch border in the margin. Inside an adaptive mask that
-becomes a stray arc across the icon. Crop ~7% off every edge before installing,
-and say "no frame, no border" in the prompt anyway.
+The model's sketched margin border becomes a stray arc across the icon inside an
+adaptive mask. Crop it before installing, per `monarch-art-generation` (Trap 2).
 
 ## Prompt for a thumbnail, not a poster
 
@@ -78,17 +81,3 @@ adb shell uiautomator dump /sdcard/ui.xml
 
 Look for: emblem inside the mask, nothing clipped at the corners, adequate
 contrast against the background layer.
-
-## Batch under a quota that dies mid-run
-
-Image quotas run out partway. A shell loop leaves no record of which lines
-landed. Drive batches from a file of `id|subject` lines with the style suffix in
-a `# SUFFIX:` comment, skip ids whose output already exists, and stop on the
-first `QUOTA_EXHAUSTED` with a named reason — so a later run finishes the set
-instead of redrawing it. Keep the prompts in version control beside the art.
-
-## Do not half-wire a set
-
-If a catalogue (crests, icons, empty states) is partly generated when the quota
-dies, leave it **unwired**. Four drawn items beside six procedural ones looks
-worse than either set alone. Record the status next to the batch file.

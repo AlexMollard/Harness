@@ -1,26 +1,18 @@
 ---
 name: compose-hand-drawn-edge-artifacts
-description: "Diagnose and fix visual artifacts in hand-drawn/procedural Compose UI on a real device — jagged \"torn\" outlines and bright corner spikes from jittered polylines stroked with miter joins, accent ticks that stack brush ends or float off a rounded edge, and raster art that shows a lighter box against a dark background from a low-alpha paper wash. Use when borders look rough on some screens, a panel corner shows a bright notch, or artwork's own background is visible."
+description: "Use when hand-drawn or ink-style Compose borders look torn, jagged or zig-zag on a real device (worse on high-density screens), when a panel corner shows a bright notch or spike, or when an accent tick blobs at a corner or floats off a rounded edge."
 ---
 
 # Hand-drawn Compose edges: artifact triage
 
-Procedural "ink" UI (jittered outlines, brush ticks, paper-grain art) produces a
-specific family of defects that compile clean, pass every test, and only show on
-a real screen. Each has a measurable cause — do not eyeball-tune constants.
+Procedural "ink" UI (jittered outlines, brush ticks) produces a specific family
+of defects that compile clean, pass every test, and only show on a real screen.
+Each has a measurable cause — do not eyeball-tune constants.
 
-## 0. Safety first: pin the device when a phone is attached
-
-An instrumented suite that seeds/clears the app database will **destroy the
-user's real data** if Gradle picks their phone. Gradle runs
-`connectedAndroidTest` on *every* connected device.
-
-```bash
-ANDROID_SERIAL=emulator-5554 ./gradlew :app:connectedDebugAndroidTest
-```
-
-Install/screenshot on the phone explicitly with `adb -s <serial>`. Never run the
-instrumented gate unpinned while a personal device is plugged in.
+With a personal phone attached, pin instrumented runs to the emulator first —
+see `android-physical-phone-safe-verify`. Raster art that shows a lighter box on
+a dark panel is a paper-wash film, not an edge defect — see
+`monarch-art-generation` (Trap 1).
 
 ## 1. Rough / "torn" outlines → polyline kinks
 
@@ -97,37 +89,12 @@ measure.getSegment(at - run / 2f, at + run / 2f, seg, true)
 Weight matters: ~1.5dp line plus a ~4dp bleed at ~0.2 alpha reads as a mark;
 2–3dp at full alpha reads as a highlighter.
 
-## 4. Raster art shows a lighter box on a dark background
-
-**Symptom:** a PNG with alpha still shows its canvas as a visible rectangle.
-
-**Cause:** the "transparent" area is not transparent — it is a light ink wash at
-low alpha (e.g. RGB 232,232,228 at alpha 7–17). Over a near-black UI that is a
-visible film.
-
-**Diagnose with the alpha histogram, not by eye:**
-
-```python
-from PIL import Image
-a = Image.open(p).convert("RGBA").split()[3]
-hist = a.histogram()   # look for a big mass at low alpha, then a GAP, then strokes
-```
-
-**Fix — soft knee above the gap**, which removes the film and keeps stroke
-edges. Verify by corner-alpha mean (→0) and by counting pixels above the stroke
-threshold before/after (must be unchanged):
-
-```python
-lut = [0 if v <= LOW else (v if v >= HIGH else round(HIGH*(v-LOW)/(HIGH-LOW))) for v in range(256)]
-img.putalpha(a.point(lut))
-```
-
-## 5. Verification loop
+## 4. Verification loop
 
 1. `adb -s <phone> install -r -t app-debug.apk`, force-stop, launch, `screencap`.
 2. Crop and magnify the suspect region with PIL (`Image.NEAREST`) — a full
    screenshot hides a 6px artifact.
 3. Quantify when possible (most-green pixel, corner alpha mean) so "better" is
    a number, not an impression.
-4. Beware heads-up notifications landing exactly over the area being judged;
-   re-take before concluding anything is missing.
+4. Retake if a heads-up notification lands over the region being judged before
+   concluding anything is missing (`android-physical-phone-safe-verify`).
