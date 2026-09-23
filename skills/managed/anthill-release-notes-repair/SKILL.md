@@ -1,94 +1,56 @@
 ---
 name: anthill-release-notes-repair
-description: "Diagnose and repair AntHill release notes when the client's \"What changed\" screen shows \"Nothing was recorded\" or forge release pages list the wrong/duplicated commits — covers the creatordate tie-sort trap in build/changelog.ps1 after a batch tag push, and backfilling published release pages via the Windows credential store. Use after tagging several commits at once, or when changelog entries look empty or cumulative."
+description: Use when asked to rename or fix a published AntHill release, or when its "What changed" entry or forge page shows no title, the version as its title, "Nothing was recorded", or no release at all.
 ---
 
-# AntHill release notes repair
+# Repairing AntHill release notes
 
-AntHill (`D:/AntHill`) derives every release note from git tags. After a batch tag
-push (see the `anthill-release-tagging` skill — one annotated tag per commit) the
-notes come out wrong in two different ways at once. Both have the same cause.
+## Overview
 
-## The symptom pair
+Every release's notes come from git tags. When `publish-client.yml` runs, `build/changelog.ps1`
+writes `changelog.json`, packed into the client for "What changed", and the forge page's body,
+headed by the tag message's first line. The pipeline then names the forge release after that
+line. Nothing reads the forge back. So the tags are the truth, a shipped package never changes,
+and most of what looks wrong is designed behaviour.
 
-| Surface | What it looks like |
-|---|---|
-| Client/dashboard `/changelog` (from packaged `changelog.json`) | "Nothing was recorded for this one" on most versions |
-| Forge release pages (from `release-notes.md` via `vpk pack --releaseNotes`) | Cumulative bodies — one release lists 20+ commits, the next the same list plus one |
+## Find the cause
 
-Do not assume one implies the other. Check both; the fix is shared.
-
-## Root cause
-
-`build/changelog.ps1` built its ordered tag list with:
+Reproduce it first, writing outside the repository:
 
 ```powershell
-git tag --list "v*" --sort=-creatordate
+pwsh -NoProfile -File build/changelog.ps1 -JsonPath <scratch>/changelog.json -NotesPath <scratch>/notes.md -Tag <tag>
 ```
 
-`creatordate` has whole-second resolution. A scripted tag batch creates many tags
-inside one second, ties order non-deterministically, so `$previous` resolves to
-the wrong tag and each `"$previous..$this"` range reaches the wrong distance —
-empty for some releases, spanning dozens of commits for others.
+| What you see | Cause |
+|---|---|
+| The version as the title | The tag's message was the version. beta.11, beta.12 and beta.22 to beta.30 went out that way. |
+| No title, only the version | A lightweight tag, or a first line identical to the subject of the release's only commit. Both are dropped on purpose; the comments in `changelog.ps1` and the wiki's `Cutting a release.md` say why. The forge name has no such rule, so it can still show that subject. |
+| "Nothing was recorded for this one" | The tag points at the same commit as the previous version's tag, or at an ancestor of it, so its range is empty. |
+| No release page (404) | The tag wasn't on the tip of `origin/main` when the pipeline ran, so its guard logged "History, not a release" and built nothing. That's by design. |
 
-Fix: order by the version number itself (parse the trailing integer, sort by
-prefix then number, descending). Immune to same-second batches, and unlike a
-lexical name sort it does not put `beta.9` above `beta.13`.
+## What each fix reaches
 
-## Diagnose locally (no forge access needed)
+- **The forge page:** rename the release, and edit the `# title` line that opens its body. It's
+  a published page, so only with the user's go-ahead. This reaches the forge and nothing else.
+- **"What changed" in the client:** nothing reaches it for a published tag. Every package
+  rebuilds it from the tag messages, so tell the user it keeps what the tag says.
+- `tools/backfill-release-notes.ps1` rebuilds bodies from those same tags and, when a tag gives
+  a title, renames the release to it. It can't fix a title, and run after a hand rename it puts
+  the tag's title back.
 
-```bash
-powershell -NoProfile -File build/changelog.ps1 \
-  -JsonPath ./_diag/changelog.json -NotesPath ./_diag/notes.md -Tag <newest tag>
-```
+Preventing a repeat is anthill-release-tagging's job.
 
-Then assert, via PowerShell over the JSON: total release count, count with
-`changes.Count -eq 0` (must be 0), and that the newest tag's entry holds exactly
-one change under per-commit tagging. "Wrote N note(s)" where N ≫ 1 for a
-per-commit tag is the scramble showing itself.
+## Don't
 
-## Repairing already-published release pages
-
-`tools/backfill-release-notes.ps1` PATCHes each release body, computing notes by
-*invoking the generator* so the two can never drift. Dry run by default.
-
-Auth on this workstation: there is no `RELEASE_TOKEN` in the environment, but the
-Windows credential store holds a working credential for the forge.
-
-```bash
-git credential fill   # stdin: protocol=https\nhost=git.ba.bigant-internal.com\n\n
-```
-
-- The stored secret is a **password, not a PAT**: `Authorization: token <secret>`
-  returns 401; Basic auth (`user:secret`, base64) works. The script's `-UserName`
-  switches it to Basic.
-- Never print the secret, never write it to a file, and clear it from memory when
-  finished.
-- TLS to the internal CA is trusted by PowerShell's `Invoke-RestMethod`; Bun's
-  `fetch` may not be — prefer PowerShell for the REST calls.
-
-```bash
-powershell -NoProfile -File tools/backfill-release-notes.ps1 \
-  -From v1.0.0-beta.72 -To v1.0.0-beta.99 -UserName <user> -Token <secret> -Apply
-```
-
-Verify afterwards by re-reading every tag in the span and counting `- ` bullets:
-one per release is the correct state.
-
-## Traps
-
-- **404 per tag = no release object.** Not every pushed tag produces a release;
-  runs fail or never start. Those cannot be PATCHed. Do **not** create bare
-  releases to fill the gap — Velopack's feed reads releases for packages, and an
-  assetless one is feed pollution. Re-running `publish-client.yml` for that tag is
-  the only honest fix.
-- **Installed packages keep their embedded `changelog.json`.** Fixing the
-  generator heals every *future* install; it cannot reach a package already built.
-  Say so rather than implying a global fix.
-- **`AntHill.App` is a Razor class library** (`OutputType Library`) — `dotnet run`
-  fails on it. The `/changelog` page is served by `AntHill.Web`; seed
-  `changelog.json` into `src/AntHill.Web/bin/<config>/<tfm>/` (that is
-  `AppContext.BaseDirectory` at runtime) and run that host to screenshot the page.
-- **`ReleaseNotesTests` pins the page markup.** Any redesign of `WhatsNew.razor`
-  breaks `The_page_lists_each_version`; re-pin it to the new classes rather than
-  loosening the assertion.
+- **Change `changelog.ps1` or `publish-client.yml` to make one release read better.** Every rule
+  above is deliberate. If one looks wrong, raise it with the user as a design change.
+- **Rewrite a published tag,** even only its message, and even once `main` has moved past it.
+  Published tags are kept. Each forge release is tied to its tag, other clones keep the old one
+  because `git fetch` won't overwrite a tag without `--force`, and what a rewrite does to the
+  forge and the update feed is untried. If the user wants the client's title changed, tell them
+  this and let them decide.
+- **Create a release by hand for a tag that has none,** prerelease or not. The pipeline makes
+  no release for a history tag on purpose, and that tag's notes are already in every client's
+  "What changed".
+- **Read a token out of the credential store, or type one in.** Anything that needs a token is
+  the user's to run.
