@@ -1,6 +1,6 @@
 ---
 name: compose-feature-wiring-audit
-description: "Audit an Android Compose app after parallel agents add screens/entities — catches screens built but never routed, defaults that hide missing wiring, enum valueOf crashes from seed data, and missing Room migrations. Use after any fan-out that adds UI surfaces or database columns."
+description: "Use when parallel agents added Compose screens, entities or DB columns: a new screen never appears, a feature silently does nothing, or launch crashes with No enum constant or a missing migration. Also after new enum values reach a UI filter row."
 ---
 
 # Compose feature wiring audit
@@ -11,12 +11,16 @@ Parallel agents produce code that compiles, passes tests, and is **unreachable o
 
 Agents build `FooScreen` but nobody routes it. The compiler never complains — an unused public composable is legal.
 
+A screen is reachable only if something other than its own declaration calls it — the nav graph (Ironvellum: `ui/IronvellumNav.kt`) or a host screen. Search all of `app/src/main`: Ironvellum's `SocialScreen` hosts Feed, Leaderboard and Account as tabs, so a nav-only grep calls them unreachable. Lead with a known-routed screen as a positive control:
+
 ```bash
-for s in FeedScreen LeaderboardScreen AccountScreen WorkoutLogScreen; do
-  printf "%-24s " "$s"
-  rtk grep -q "$s(" app/src/main/kotlin/**/ui/MonarchNav.kt && echo REACHABLE || echo "NOT REACHABLE"
+for s in SettingsScreen FeedScreen LeaderboardScreen AccountScreen WorkoutLogScreen; do   # first = known-routed control
+  c=$(grep -rn --include='*.kt' "$s(" app/src/main | grep -v "fun $s(" | cut -d: -f1 | sed 's#.*/##' | sort -u | tr '\n' ' ')
+  printf "%-24s %s\n" "$s" "${c:-NOT REACHABLE}"
 done
 ```
+
+Each line names the calling files. A `@Preview` caller doesn't count, nor does a host that is itself unreachable — follow the chain up to the nav graph. A control that prints NOT REACHABLE means the check is broken, not the app: git-bash has globstar off, so a `**` path like `app/src/main/kotlin/**/ui/*Nav.kt` never matches a package three directories deep, grep exits 2, and every screen reads NOT REACHABLE (verified 2026-09-24).
 
 Real result from one session: **5 of 5 screens NOT REACHABLE** — feed, leaderboard, account (the sign-in gate!), workout log and detail. The user found out by looking for them.
 

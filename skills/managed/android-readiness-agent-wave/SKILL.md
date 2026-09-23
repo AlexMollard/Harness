@@ -1,42 +1,43 @@
 ---
 name: android-readiness-agent-wave
-description: "Run a parallel agent wave that closes Android production-readiness gaps (R8 + signing, Room migration tests, auto-backup privacy leak, crash journal, monotonic cloud sync, launcher icons, policy docs, CI) with exclusive file ownership, then integrate and verify. Use when asked to \"make this app prod ready\" or to fix a whole readiness audit at once, rather than auditing one gap at a time."
+description: "Use when asked to make an Android app prod ready by fixing a whole readiness audit at once with parallel agents: R8 + signing, Room migration tests, auto-backup privacy leak, crash journal, monotonic cloud sync, launcher icons, policy docs, manual-only CI."
 ---
 
 # Android readiness agent wave
 
 Companion to `android-release-readiness-audit` (which *finds* the gaps). This is
-how to **close them all concurrently** without the agents destroying each other's
-work, plus the integration defects that show up every time.
+how to **close them all concurrently**, plus the defects that show up every time.
+Wave mechanics (briefs, build rule, acceptance) are `fixer-wave-orchestration`;
+this skill adds the Android slice plan.
 
 ## 1. Slice by exclusive file ownership
 
-One agent per slice; no two agents may touch the same file. Workable split:
+One agent per slice; no two agents may touch the same file. Paths are Ironvellum's
+(`D:/Monarch`, package `com.ironvellum.app`); map them onto the target app.
 
-| Slice | Owns |
-|---|---|
-| BuildRelease | `app/build.gradle.kts`, `gradle/libs.versions.toml`, `app/proguard-rules.pro` |
-| MigrationTests | `data/MonarchDatabase.kt` (the `@Database` class), `app/src/androidTest/**`, new `app/src/test/**/data/**` |
-| BackupPrivacy | `AndroidManifest.xml`, `res/xml/**` |
-| CrashJournal | new journal file, `MonarchApp.kt`, `SettingsScreen.kt` |
-| SyncGuard | `data/cloud/CloudSync.kt`, `data/cloud/Dtos.kt` |
-| LauncherIcon | `res/mipmap-*/**` only |
-| PolicyDocs | `PRIVACY.md`, `docs/**`, `README.md` |
-| CI | `.github/workflows/**` |
-| SdkScout | read-only research (`scout` agent) |
+| Slice | Owns | Slice skill |
+|---|---|---|
+| BuildRelease | `app/build.gradle.kts`, `gradle/libs.versions.toml`, `app/proguard-rules.pro` | `android-r8-release-verification` |
+| MigrationTests | `data/IronvellumDatabase.kt` (the `@Database` class), `app/src/androidTest/**`, new `app/src/test/**/data/**` | `room-migration-data-survival-test`, `kotlin-test-file-overwrite-guard` |
+| BackupPrivacy | `AndroidManifest.xml`, `res/xml/**` | `android-backup-exclusion-verify` |
+| CrashJournal | new `data/CrashJournal.kt`, `IronvellumApp.kt`, `ui/settings/SettingsScreen.kt` | `android-crash-journal-and-periodic-work-verify` |
+| SyncGuard | `data/cloud/CloudSync.kt`, `data/cloud/Dtos.kt` | |
+| LauncherIcon | `res/mipmap-*/**` only | `android-adaptive-icon-from-generated-art` |
+| PolicyDocs | `PRIVACY.md`, `docs/**`, `README.md` | `play-data-safety-code-audit` |
+| CI | `.github/workflows/**`, `workflow_dispatch` triggers only (never push/PR/schedule) | `private-repo-ci-to-local-gate` |
+| SdkScout | read-only research (`scout` agent) | |
 
-Cross-slice dependencies must be **decided by the parent up front** and written
-into the shared context, because agents cannot negotiate mid-flight. The two that
-always bite:
+Brief every slice per `fixer-wave-orchestration`: Gradle agents run no gradle, lint
+or adb, and the parent validates once. Write these cross-slice contracts into the
+shared context before dispatch; they always bite:
 
 - The gradle owner must add the androidTest deps, `testInstrumentationRunner`,
   the `room.schemaLocation` KSP arg **and**
   `sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")` —
   without that last line `MigrationTestHelper` fails with "Cannot find schema file".
 - The `@Database` owner turns on `exportSchema`, not the gradle owner.
-
-Tell every agent: **do not run gradle/lint/adb** (parallel Gradle runs fight over
-the lock); the parent validates once.
+- BuildRelease wires signing to credentials the owner supplies. **Never create the
+  release keystore**; generating their signing key is not yours to do.
 
 ## 2. Parent work while they run
 
@@ -45,19 +46,20 @@ which spans many files and would collide with everyone.
 
 ## 3. Integration gate — assume damage
 
+Run the `subagent-damage-repair` probes on every changed `.kt`, import diff first
+(dropped imports are the #1 agent failure mode). Then eyeball non-import deletions
+for deleted functions/loops:
+
 ```bash
-# dropped imports (the #1 agent failure mode); strip CR first, files may be CRLF
-for f in <changed .kt>; do
-  git show HEAD:$f | tr -d '\r' | grep "^import " | sort > /tmp/h.txt
-  tr -d '\r' < $f    | grep "^import " | sort > /tmp/n.txt
-  echo "$f dropped: $(comm -23 /tmp/h.txt /tmp/n.txt | tr '\n' ' ')"
-done
-# non-import deletions, to eyeball for deleted functions/loops
 git diff -U0 -- "*.kt" | grep "^-" | grep -v "^---" | grep -v "^-import "
 ```
 
-CRLF also breaks `$`-anchored `grep`/`comm` checks — a "missing import" that the
-compiler clearly resolves is the tool, not the file.
+CRLF: D:/Monarch checks out CRLF (`core.autocrlf=true`); `git show HEAD:` emits LF.
+git-bash `grep`/`sed`/`awk` strip the CR, so the probes work as written. ripgrep and
+the built-in Grep tool keep it: `$`-anchored patterns miss, and a ripgrep-fed import
+diff lists all 83 imports of an unchanged `Repository.kt` as dropped (verified
+2026-09-24). Add `tr -d '\r'` around them — a "missing import" the compiler clearly
+resolves is the tool, not the file.
 
 ## 4. Defects this wave produces (seen every run)
 
@@ -71,31 +73,30 @@ compiler clearly resolves is the tool, not the file.
 
 ## 5. Verification order (each gates the next)
 
-1. `:app:assembleDebug :app:testDebugUnitTest`
-2. `:app:assembleRelease` — R8 is the risky change; note the size drop.
-3. **Negative test the fail-fast**: back up `local.properties`, blank the keys,
-   assert the release task fails, restore, and verify the restore.
-4. `:app:lintRelease` → triage the SARIF, not the HTML:
-   ```python
-   json.loads(Path("app/build/reports/lint-results-release.sarif").read_text())
-   # count by (level, ruleId); level falls back to rules[id].defaultConfiguration.level
-   ```
-5. Device: `connectedDebugAndroidTest`, plus install a **debug-signed copy of the
+Ironvellum's tasks are flavoured; `python tools/gate.py --no-device --backend`
+covers steps 1 and 4.
+
+1. `:app:assembleFossDebug :app:testFossDebugUnitTest`
+2. `:app:assembleFossRelease` — R8 is the risky change; note the size drop, then
+   run the no-device checks in `android-r8-release-verification`.
+3. **Negative-test the fail-fast** (reversible procedure: `android-r8-release-verification`).
+   Ironvellum's gate is `validateFossReleaseBackend`/`validatePlayReleaseBackend`
+   (`supabase.url`, `supabase.key`; play adds `google.webClientId`). Signing is
+   deliberately not fail-fast: no credentials, unsigned APK. Blank a key by setting
+   it empty in `local.properties` (a deleted key is refilled from the committed
+   `cloud-defaults.properties`); `IRONVELLUM_*` env vars beat the file for signing.
+4. `:app:lintFossRelease` → triage `app/build/reports/lint-results-fossRelease.sarif`
+   with the SARIF script in `android-release-readiness-audit`, not the HTML.
+5. Device, **emulator only** (the instrumented suite runs `pm clear`, deletes rows
+   and uninstalls, destroying the S25's real training history):
+   `python tools/gate.py --serial emulator-5554`, or `:app:connectedFossDebugAndroidTest`
+   with `ANDROID_SERIAL=emulator-5554`. Then install a **debug-signed copy of the
    release APK** to smoke R8 at runtime (serialization/ktor break here, not at compile).
 
 ## 6. Judgement calls worth repeating
 
-- **Don't blanket-fix lint.** `UnusedResources` on drawables is often art that was
-  drawn and never wired — wiring it is the fix, deleting it hides a feature gap.
-  `ModifierParameter` "should default to `Modifier`" is wrong when a non-plain
-  default (`Modifier.fillMaxSize()`) is deliberate; changing it alters layout at
-  every call site.
-- **Locale in Compose**: `String.format(Locale.getDefault(), …)` inside a
-  `@Composable` raises the `NonObservableLocale` **error**. Use
-  `androidx.compose.ui.text.intl.Locale.current.platformLocale` (verify
-  `platformLocale` exists in the pinned `ui-text` jar). Non-composable helpers may
-  keep `Locale.getDefault()`.
+- **Don't blanket-fix lint.** The `UnusedResources`, `ModifierParameter` and
+  `NonObservableLocale` calls are in `android-r8-release-verification`;
+  non-composable helpers may keep `Locale.getDefault()`.
 - **Refuse i18n extraction** unless a second locale is actually needed — hundreds
   of strings, high breakage, no user-visible benefit.
-- **Never create the release keystore.** Wire the config to credentials the owner
-  supplies; generating their signing key is not yours to do.

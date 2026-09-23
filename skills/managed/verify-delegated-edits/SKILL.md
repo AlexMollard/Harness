@@ -1,6 +1,6 @@
 ---
 name: verify-delegated-edits
-description: "Verify a code change made by a subagent/worker before accepting it — attribute new test and lint failures to your own edits via stash-vs-worktree comparison, inventory the full changeset for stray edits or deletions, and re-run any negative search a worker got wrong."
+description: "Use when accepting a subagent's or worker's change: it reports all tests pass with no raw output, calls a new test or lint failure pre-existing, or one of its negative searches (no such file anywhere) proves wrong. Also when delegated work leaves stray or deleted files."
 ---
 
 A worker reporting "all tests pass, verification PASS" is a claim, not evidence.
