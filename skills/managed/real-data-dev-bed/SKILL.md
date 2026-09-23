@@ -1,7 +1,9 @@
 ---
 name: real-data-dev-bed
-description: "Populate a dev/test environment with a real, size-bounded subset of a production asset repository — selecting complete units, importing into the target VCS with real authorship, and keeping the run resumable. Use when asked for \"real data in dev\", \"a test bed of real assets\", or \"some of the real repo, not the whole thing\"."
+description: "Use when asked for real data in dev, a test bed of real assets, or some of the real repo but not the whole thing (files imported into a dev VCS with real authorship), or that import died part-way."
 ---
+
+# Real-data dev bed
 
 Materialise a bounded slice of a huge production repository as a working dev environment.
 

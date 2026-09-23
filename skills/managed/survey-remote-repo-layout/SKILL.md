@@ -1,6 +1,6 @@
 ---
 name: survey-remote-repo-layout
-description: "Capture a too-large-to-clone repository's layout (SVN/Perforce/git) as a committed manifest, then validate indexing or grouping rules against real data — use when asked to \"use real data\" from a repo that cannot be checked out."
+description: "Use when asked to use real data from a repo too large to clone or check out (SVN/Perforce/git): capture its layout as a committed manifest, or validate indexing or grouping rules on real paths without file contents."
 ---
 
 # Survey a repository too large to clone
