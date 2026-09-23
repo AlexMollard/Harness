@@ -1,6 +1,6 @@
 ---
 name: supabase-backend-from-windows
-description: "Stand up and verify a Supabase backend for a mobile/desktop app from a Windows box with no supabase CLI or psql — pooler discovery when the direct host is IPv6-only, applying migrations via Docker psql, proving RLS actually blocks anon (including the security_invoker view trap), and wiring supabase-kt + Google sign-in into Android. Use when asked to add a cloud backend, apply Supabase SQL, or debug \"could not translate host name\" / leaking views."
+description: "Use when adding a Supabase cloud backend to a mobile/desktop app from a Windows box with no supabase CLI or psql, applying Supabase SQL migrations, or when psql fails with could not translate host name for db.<ref>.supabase.co. Also for pooler errors like tenant/user not found, proving RLS blocks the anon key, wiring supabase-kt into Android, or Google sign-in failing with an invalid nonce."
 ---
 
 # Supabase backend from a Windows box
@@ -58,19 +58,9 @@ shared channel.
 
 ## 3. Verifying RLS for real
 
-Two checks people get wrong:
-
-**Views bypass RLS by default.** A view runs as its owner, so a leaderboard view
-over a protected table leaks everything. Create it with
-`with (security_invoker = true)`. Do NOT verify via `pg_class.relrowsecurity` —
-that column is always `f` for views and proves nothing. Check `reloptions`:
-
-```sql
-select relname, reloptions from pg_class c
-join pg_namespace n on n.oid = c.relnamespace
-where n.nspname = 'public' and c.relkind = 'v';
--- expect {security_invoker=true}
-```
+Create every view over a protected table `with (security_invoker = true)`. Proving
+the view actually hides rows (the `reloptions` check, and why it is not enough) is
+`postgres-view-privacy-mutation-proof`.
 
 **An empty table makes any anon test pass.** Insert a real row, check as `anon`,
 roll back:
@@ -86,6 +76,10 @@ set local role anon;
 select 'anon', count(*) from leaderboard;   -- must be 0
 rollback;
 ```
+
+That proves anon is refused, not that the board works: a view that shows nobody
+anything passes it too. For views, add the friend/self rows from
+`postgres-view-privacy-mutation-proof`.
 
 Also exercise the public key over HTTP — reads should return `[]` and writes
 should fail `42501`:
@@ -103,7 +97,9 @@ curl -s -X POST "$URL/rest/v1/<table>" -H "apikey: $PUBLISHABLE_KEY" \
 - Case-insensitive unique handles: `create unique index … on profiles (lower(display_name))`.
 - Friendship as one row per pair with a `no_self_friendship` check; expose
   `is_friend(a,b)` and `can_view(owner)` as `security definer stable` SQL
-  functions and write policies in terms of `can_view`.
+  functions and write policies in terms of `can_view`. `revoke ... from public`
+  alone leaves such functions callable with the anon key; see
+  `supabase-function-revoke-anon-trap` before relying on a revoke.
 - Decide explicitly what must never sync (e.g. body measurements) and give it
   **no table** — absence is a stronger guarantee than a policy.
 

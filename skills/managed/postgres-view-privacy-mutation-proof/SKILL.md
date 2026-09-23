@@ -1,14 +1,27 @@
 ---
 name: postgres-view-privacy-mutation-proof
-description: "Prove a Postgres/Supabase view (leaderboard, feed, board) actually hides rows the reader may not see — covers why asserting security_invoker=true is necessary but not sufficient, the SECURITY DEFINER wrapper that leaks every row while the setting still reads true, the narrowed-predicate case where a board reads empty for everyone and all refusal checks still pass, and running the mutations against a throwaway docker Postgres. Use when adding or reviewing any view over a row-level-secured table, or when a privacy claim rests only on a schema-level setting."
+description: "Use when adding or reviewing a Postgres/Supabase view (leaderboard, feed, board) over an RLS table, when a view leaks rows or a board reads empty for everyone, or when security_invoker=true is the only privacy evidence. Also when any privacy claim rests on a schema-level setting alone."
 ---
 
 # Proving a view really hides rows
 
-A view over an RLS-protected table is a privacy boundary. Schema-level checks
-(`reloptions` contains `security_invoker=true`) are cheap and worth having, but
-they do **not** prove the boundary holds. Read rows through the view, as real
+A view over an RLS-protected table is a privacy boundary. By default a view runs as
+its owner, so it bypasses RLS and leaks every row unless it is created
+`with (security_invoker = true)`. Schema-level checks are cheap and worth having,
+but they do **not** prove the boundary holds. Read rows through the view, as real
 roles.
+
+## The schema-level check: necessary, not sufficient
+
+Do NOT verify via `pg_class.relrowsecurity` — that column is always `f` for views
+and proves nothing. Check `reloptions`:
+
+```sql
+select relname, reloptions from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relkind = 'v';
+-- expect {security_invoker=true}
+```
 
 ## The two failure shapes a setting check misses
 
@@ -61,7 +74,8 @@ invisible.
    Expect some to be caught by checks that already existed. Say so; the new
    coverage is only what the last two prove.
 4. Restore each mutation immediately (`create or replace` back), and re-run the
-   whole suite **three times** — a fixture-mutating suite must not poison itself.
+   whole suite **three times**. The checks mutate the rows they depend on, so
+   fixtures need `on conflict do update` or the suite poisons itself.
 5. Tear the container down.
 
 ## Traps
@@ -71,5 +85,3 @@ invisible.
   new one works at all.
 - **Don't claim counts you didn't measure.** `grep -c assert_true` includes the
   helper's own definition; count `perform assert_true(` call sites.
-- Re-runnability needs `on conflict do update` fixtures, since the checks mutate
-  the rows they depend on.
