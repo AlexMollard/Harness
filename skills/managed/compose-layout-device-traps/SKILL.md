@@ -1,6 +1,6 @@
 ---
 name: compose-layout-device-traps
-description: "Diagnose Jetpack Compose layout defects that compile clean, pass unit tests, and only appear on a real device — content stacking inside a Box-slot container (PullToRefreshBox/Scaffold), LazyColumn-in-verticalScroll crashes, chip rows wrapping one letter per line, keyboard covering inputs, and adb taps landing on the IME. Use when a screen \"renders wrong\" but the build is green, or before trusting an agent's \"my file compiles\" claim about UI."
+description: "Use when Compose renders wrong on device but builds green: Row labels one letter per line, zero-width steppers, stacking in PullToRefreshBox, keyboard over inputs, LazyColumn in verticalScroll. Also on 'measured with an infinity maximum height constraints', Scaffold content drawn over itself, adb taps landing on the IME, uiautomator bounds that disagree with the screenshot, Text printing a data class toString, or before trusting an agent's 'my file compiles' claim about UI."
 ---
 
 # Compose layout defects the compiler cannot see
@@ -10,10 +10,11 @@ Scope: **layout/measure/gesture defects that only appear on a device.** Green bu
 Sibling skills — do not duplicate them:
 - **Wiring** defects (screens built but never routed, defaults that hide missing wiring, `valueOf` crashes from seed data, missing Room migrations) → `compose-feature-wiring-audit`.
 - **adb mechanics** (device auth, wake, uiautomator driving, screenshots, gradle quirks) → `android-usb-verify`.
+- Defects that appear only at a large or small **system font scale** → `android-font-scale-verification`.
 
 ## The rule that catches all of these
 
-A screenshot is the only proof. Run the flow, capture, and *read the image* — do not accept a `uiautomator dump` alone, because a dump lists nodes that are stacked, clipped, or behind the keyboard as though they render fine.
+A screenshot is the only proof. Run the flow, capture, and *read the image*. A `uiautomator dump` misleads in both directions: it lists nodes that are stacked, clipped, or behind the keyboard as though they render fine, and it can report nonsense bounds for a text node (a title 6px tall, hit-rects overlapping in Y) on a screen that renders correctly. Confirmed: such bounds persisted unchanged after a fix whose screenshot was visibly correct. Treat odd bounds as a reporting artifact and adjudicate with `exec-out screencap`, not the XML.
 
 ```bash
 ADB="$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"
@@ -40,6 +41,8 @@ PullToRefreshBox(isRefreshing = …, onRefresh = …) {
 }
 ```
 
+Stacking overlays whole elements at one origin; width starvation (Trap 3a) squeezes widths inside a `Row`. Different bugs, different fixes.
+
 ## Trap 2 — LazyColumn inside a verticalScroll parent
 
 Crashes at measure time:
@@ -59,15 +62,61 @@ Column(Modifier.fillMaxSize()) {
 When one tab of a screen needs a lazy list and the others scroll, branch the modifier:
 `.then(if (lazyTab) Modifier else Modifier.verticalScroll(rememberScrollState()))`.
 
-## Trap 3 — chip rows overflow instead of scrolling
+## Trap 3 — Row labels one letter per line: find the cause before the fix
 
-A fixed `Row` of filter chips silently wraps each label to one letter per line off the right edge (`CLIMBING` → `C/L/I/M…`) once the set grows.
+Signature: labels wrap **one character per line** (`L` / `O` / `A` / `D`, or `CLIMBING` → `C/L/I/M…`), steppers, fields or icon pairs collapse to slivers or vanish, the build is green, and the `Row` body reads as correct. Two causes with opposite fixes, so read the Row's **whole child list** before touching any size.
+
+### 3a. A greedy sibling starves the weighted children
+
+A `Row` where one child is **inflexible and greedy** (typically `Modifier.fillMaxWidth()`, or a fixed `width()` larger than the slack) measures that child first. Every `weight(1f)` sibling divides what is left, which can be **zero**. The culprit is the sibling nobody suspects, often appended later by a feature that was meant to sit *below* the row:
+
+```kotlin
+Row(Modifier.fillMaxWidth()) {
+    Column(Modifier.weight(1f)) { /* starved */ }
+    Column(Modifier.weight(1f)) { /* starved */ }
+    SomeBadge()            // <- internally Row(Modifier.fillMaxWidth()), takes everything
+}
+```
+
+Grep the suspect child's own composable for `fillMaxWidth()` / `width(`:
+
+```
+grep pattern: "private fun <ChildName>|fillMaxWidth\(|width\("
+```
+
+A comment on the offending call site saying the element belongs "under" / "below" the row is strong confirmation the structure, not the sizing, is wrong.
+
+Fix structurally: wrap in a `Column` and move the greedy child out of the `Row`. Carry the outer modifiers (`fillMaxWidth`, `alpha`, `padding`) up to the `Column` so behaviour is unchanged:
+
+```kotlin
+Column(Modifier.fillMaxWidth().alpha(..).padding(..)) {
+    Row(Modifier.fillMaxWidth(), ...) { /* controls only */ }
+    SomeBadge()
+}
+```
+
+Do **not** "fix" it by shrinking the badge, adding `weight` to the greedy child, or setting `maxLines` on the starved labels. Those hide the measurement bug and it returns with the next label change.
+
+Verify by comparing **child widths** before/after via uiautomator:
+
+```python
+# widths of the row's children; starved children report w≈0 or a 6px-tall text node
+for b, txt in nodes(xml, r'text="[^"]{1,60}"'):
+    print(repr(txt), "w=", b[2]-b[0], b)
+```
+
+Expect starved children to go from absent/slivers to real widths (e.g. a stepper's `−` `value` `+` each reporting ~100px+).
+
+### 3b. A fixed chip rail outgrew the row
+
+With no greedy sibling, a fixed `Row` of filter chips silently wraps each label to one letter per line off the right edge once the set grows. Scroll the rail and keep each chip's text on one line:
 
 ```kotlin
 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), …) { … }
 Text(label, maxLines = 1, softWrap = false)   // on the chip's own Text
 ```
-Also check for **duplicated filter axes**: if two rails end up offering the same values (e.g. a muscle-group enum that grew to include activity groups already present in a category rail), the fix is to narrow one rail, not to scroll both.
+
+`maxLines` is part of this fix only, paired with the scroll; on a starved Row (3a) it hides the bug. Also check for **duplicated filter axes**: if two rails end up offering the same values (e.g. a muscle-group enum that grew to include activity groups already present in a category rail), the fix is to narrow one rail, not to scroll both.
 
 ## Trap 4 — keyboard covers the input, and eats your taps
 
@@ -99,5 +148,6 @@ keyboardActions = KeyboardActions(onDone = { submit() }),
 
 1. Screenshot read by eye — not a dump, not a compile.
 2. `FATAL: 0` from a **cleared** crash buffer, plus a live pid.
-3. Count what should render vs what does (header says "5 hunters ranked" → count five).
-4. Grep the diff for `"\$[a-z]+\.`, new `LazyColumn`, new `Row(` chip rails, new text fields.
+3. Count what should render vs what does (header says "5 lifters ranked" → count five).
+4. Grep the diff for `"\$[a-z]+\.`, new `LazyColumn`, new `Row(` chip rails, children appended to an existing `Row`, new text fields.
+5. Child widths are real for every `Row` you touched (Trap 3a).

@@ -48,6 +48,9 @@ val room = windowHeightDp / LocalDensity.current.fontScale
 // stock 891 · largest display + 2x text 347 → threshold 400 fires only there
 ```
 
+In an app that pins its text scale (`android-pin-single-font-scale`), `fontScale` never changes:
+divide by the pinned constant instead (Ironvellum uses `FIXED_FONT_SCALE`).
+
 Derive the threshold from three real measurements; do not guess a round number.
 
 ## Trap 2 — measure the window, not the display
