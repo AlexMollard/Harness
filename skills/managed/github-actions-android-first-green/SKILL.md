@@ -1,6 +1,6 @@
 ---
 name: github-actions-android-first-green
-description: "Get an Android/Gradle GitHub Actions workflow to its first genuinely green run when CI is assumed working but has silently failed on every push — covers the non-executable gradlew committed from Windows, the silent OOM kill with no error line on a 7.8 GiB runner, and the emulator-runner script that receives backslash continuations literally. Use before claiming CI passes, after adding a workflow, or when local replays of CI commands are being treated as proof."
+description: "Use when an Android/Gradle GitHub Actions workflow is assumed working but every run is red, before claiming CI passes, after adding a workflow, or when local replays of CI are taken as proof. Symptoms: ./gradlew Permission denied (exit 126), a job that stops mid-Gradle with no ##[error] line, or android-emulator-runner reporting Task not found for a backslash continuation."
 ---
 
 # Getting an Android CI workflow to its first real green
@@ -15,9 +15,25 @@ gh auth status
 gh run list --limit 10
 ```
 
-A repo can push for weeks with every run red and nobody noticing. If a
+A repo can go weeks with every run red and nobody noticing. If a
 project doc claims CI "has never run" or "passes", verify it here first — that
 claim is often stale or simply wrong, and correcting it is part of the work.
+
+**Every run is dispatched by hand.** This account's zero-spend policy makes every
+workflow `workflow_dispatch`-only, so a push starts nothing. Push the fix, then:
+
+```bash
+gh workflow run <workflow>.yml --ref <branch>     # prints the run URL when available
+gh run list --workflow <workflow>.yml --limit 3   # or find the new run's ID here
+```
+
+`gh workflow run` fails on a workflow with no `workflow_dispatch:` trigger. If it
+still has `push`/`pull_request` triggers, replace them rather than adding dispatch
+beside them (`github-actions-cost-shutdown`, step 2). Never add a `push`,
+`pull_request` or `schedule` trigger to get a run. Standard runners are free on
+public repos; on a private repo every attempt draws on the plan's included minutes
+and bills the overage, so get the owner's go-ahead and fix what you can check
+locally first.
 
 ## 1. gradlew must be mode 100755
 
@@ -54,14 +70,16 @@ script: |
   free -h
 ```
 
-Real numbers from a standard `ubuntu-latest` runner:
+Real numbers from a standard `ubuntu-latest` runner on a private repo:
 
 ```
 Mem:  7.8Gi total, 4.5Gi used, 164Mi free, 3.4Gi buff/cache
 /dev/root  72G  65G used  6.7G avail  91%
 ```
 
-**7.8 GiB, not 16.** So the common defaults cannot fit together:
+**7.8 GiB, not 16.** GitHub documents the standard Linux runner as 2 CPU / 8 GB
+on private repos and 4 CPU / 16 GB on public ones (verified 2026-09-24), so
+measure on yours. On the 7.8 GiB runner the common defaults cannot fit together:
 
 | component | typical default | fits? |
 |---|---|---|
@@ -110,7 +128,8 @@ Judge the job by its final `##[error]` / Gradle `FAILURE:` block, not by these.
 ## 5. Watching a run without burning the session
 
 Runs take 10–30 minutes on a memory-starved runner. Poll in a loop inside one
-command rather than issuing many short waits:
+command rather than issuing many short waits, and run it async or with a long
+tool timeout (omp's bash tool defaults to 300 s):
 
 ```bash
 for i in $(seq 1 20); do
@@ -136,7 +155,7 @@ hides the error line.
 ## Order of work
 
 1. `gh run list` — establish the real history before touching anything.
-2. Fix the mode bit; push; confirm jobs now get past `Set up`.
-3. If a job dies with no error, add `free -h`/`df -h`; push; read the numbers.
+2. Fix the mode bit; push; dispatch; confirm jobs now get past `Set up`.
+3. If a job dies with no error, add `free -h`/`df -h`; push; dispatch; read the numbers.
 4. Size heaps and emulator from those numbers, one command per line.
 5. Only claim green after `gh run view` reports every job `success`.

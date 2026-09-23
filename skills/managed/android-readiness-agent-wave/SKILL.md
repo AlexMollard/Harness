@@ -24,7 +24,7 @@ One agent per slice; no two agents may touch the same file. Paths are Ironvellum
 | SyncGuard | `data/cloud/CloudSync.kt`, `data/cloud/Dtos.kt` | |
 | LauncherIcon | `res/mipmap-*/**` only | `android-adaptive-icon-from-generated-art` |
 | PolicyDocs | `PRIVACY.md`, `docs/**`, `README.md` | `play-data-safety-code-audit` |
-| CI | `.github/workflows/**`, `workflow_dispatch` triggers only (never push/PR/schedule) | `private-repo-ci-to-local-gate` |
+| CI | `.github/workflows/**`, `workflow_dispatch` triggers only (never push/PR/schedule) | `github-actions-cost-shutdown` |
 | SdkScout | read-only research (`scout` agent) | |
 
 Brief every slice per `fixer-wave-orchestration`: Gradle agents run no gradle, lint
