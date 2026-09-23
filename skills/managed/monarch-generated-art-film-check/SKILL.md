@@ -6,8 +6,11 @@ description: "Generate, verify and wire hand-drawn ink artwork for the Monarch A
 # Monarch generated art: the film, the frame, and the quota
 
 `tools/art.py` drives gemini-3.1-flash-image through omp's `google-antigravity`
-provider (auth: `omp token google-antigravity`; transport: headroom on
-127.0.0.1:8787; the Gemini body must be nested under `"request"`).
+provider (auth: `omp token google-antigravity`; the Gemini body must be nested
+under `"request"`). Its transport is dead until art.py is repointed: `ENDPOINT`
+still targets headroom on 127.0.0.1:8787, which was removed on 2026-09-23 (see
+`monarch-art-generation`). Fix art.py in the Monarch repo; never restart
+headroom to make it work.
 
 ## The failure this skill exists for
 
