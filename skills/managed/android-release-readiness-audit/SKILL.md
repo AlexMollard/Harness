@@ -30,7 +30,10 @@ Note the APK size here. With `isMinifyEnabled = false` and no `proguardFiles`
 
 ## 2. Lint, machine-readable
 
-Do not eyeball the HTML report. Run `:app:lintRelease`, then parse the SARIF:
+Do not eyeball the HTML report. Run `:app:lintRelease`, then parse the SARIF. A flavoured app
+writes `lint-results-<flavour>Release.sarif` (Ironvellum: `lint-results-fossRelease.sarif`), and a
+`lint-results-release.sarif` left from before the flavours still sits there reading as current
+(verified 2026-09-24): point the script at the flavoured file.
 
 ```python
 import json, pathlib, collections

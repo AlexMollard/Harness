@@ -103,21 +103,9 @@ Also build the store artifact, which exercises a different path from the APK:
 
 ## 6. Lint triage via SARIF, not the HTML report
 
-```bash
-./gradlew :app:lintRelease
-python - <<'PY'
-import json, pathlib, collections
-d = json.loads(pathlib.Path("app/build/reports/lint-results-release.sarif").read_text(encoding="utf-8"))
-run = d["runs"][0]; rules = {r["id"]: r for r in run["tool"]["driver"].get("rules", [])}
-c = collections.Counter()
-for r in run.get("results", []):
-    rid = r.get("ruleId")
-    lvl = r.get("level") or rules.get(rid, {}).get("defaultConfiguration", {}).get("level", "warning")
-    c[(lvl, rid)] += 1
-print("total", sum(c.values()), "errors", sum(n for (l, _), n in c.items() if l == "error"))
-for (l, rid), n in c.most_common(): print(f"  {l:8} {rid:26} x{n}")
-PY
-```
+Run `./gradlew :app:lintRelease` (a flavoured app runs `:app:lint<Flavour>Release` and writes
+`lint-results-<flavour>Release.sarif`) and triage the SARIF with the script in
+`android-release-readiness-audit` section 2, never the HTML report.
 
 Judgement calls worth keeping:
 - `UnusedResources` on hand-made art is usually a **feature gap** (assets built,
