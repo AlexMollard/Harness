@@ -1,0 +1,3 @@
+# omp strips SKILL.md frontmatter with an LF-only regex, so managed skills must
+# check out LF even under core.autocrlf=true. text=auto leaves binaries alone.
+skills/managed/** text=auto eol=lf
