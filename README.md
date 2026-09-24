@@ -335,7 +335,7 @@ username on the next machine doesn't break anything.
 
 ```powershell
 .\sync-skills.ps1 -Unlink   # harness dirs become real, populated dirs again
-git show 038dda0            # every original file, verbatim
+git show d2940d9            # every original file, verbatim
 ```
 
 `-Unlink` removes only the junction; the pool is untouched. Nothing here deletes a file
