@@ -1,11 +1,11 @@
 modelRoles:
   plan: anthropic/claude-opus-5-5:high
   task: anthropic/claude-sonnet-5:low
-  commit: gpustack/qwen3.8-27b-nvfp4:off
+  commit: anthropic/claude-haiku-4-5
   advisor: anthropic/claude-opus-5-5:low
-  tiny: gpustack/qwen3.8-27b-nvfp4:off
+  tiny: anthropic/claude-haiku-4-5
   default: anthropic/claude-opus-5-5:high
-  smol: gpustack/qwen3.8-27b-nvfp4:off
+  smol: anthropic/claude-haiku-4-5
   slow: anthropic/claude-opus-5-5:max
   vision: anthropic/claude-sonnet-5:medium
   SeriousBuisness: anthropic/claude-opus-5-5:max

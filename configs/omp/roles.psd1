@@ -13,19 +13,31 @@
   # 401s. There is no graceful runtime degradation, so the branch has to happen
   # when the config is written.
   #
-  # Roles absent from every map below (commit, tiny, default, slow, vision,
-  # SeriousBuisness) are left exactly as config.yml has them.
+  # Roles absent from every map below (default, slow, vision, SeriousBuisness)
+  # are left exactly as config.yml has them.
 
   # Always applied. Works with no credentials beyond an Anthropic login.
   base     = @{
     plan    = 'anthropic/claude-opus-5-5:high'
     task    = 'anthropic/claude-sonnet-5:low'
     advisor = 'anthropic/claude-opus-5-5:low'
-    smol    = 'gpustack/qwen3.8-27b-nvfp4:off'
+    commit  = 'anthropic/claude-haiku-4-5'
+    tiny    = 'anthropic/claude-haiku-4-5'
+    smol    = 'anthropic/claude-haiku-4-5'
   }
 
   # Applied over `base`, in order, when the named env var is set.
   overlays = @(
+    @{
+      name  = 'gpustack'
+      key   = 'GPUSTACK_API_KEY'
+      why   = 'the local Qwen server costs nothing for commit messages and small jobs'
+      roles = @{
+        commit = 'gpustack/qwen3.8-27b-nvfp4:off'
+        tiny   = 'gpustack/qwen3.8-27b-nvfp4:off'
+        smol   = 'gpustack/qwen3.8-27b-nvfp4:off'
+      }
+    }
     @{
       name  = 'zai'
       key   = 'ZAI_API_KEY'

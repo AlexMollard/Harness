@@ -34,8 +34,7 @@ the result — stopping at the first problem rather than leaving you half-config
 > [!NOTE]
 > Keys are typed into a masked prompt and written via .NET straight to the user
 > environment. They are never echoed, logged, passed on a command line, or committed.
-> Only `GPUSTACK_API_KEY` is required — skip the rest and you get a working
-> Claude-only setup.
+> No key is required — skip them all and you get a working Claude-only setup.
 
 <details>
 <summary><b>What setup.bat actually does</b></summary>
@@ -131,14 +130,17 @@ Loaded into every session on both harnesses.
 omp's roles are assigned from what the machine can actually reach, per
 [`configs/omp/roles.psd1`](configs/omp/roles.psd1).
 
-| Role | Default | With `ZAI_API_KEY` |
-|---|---|---|
-| `plan` | `claude-opus-5-5:high` | `glm-5.3-flash:high` |
-| `task` | `claude-sonnet-5:low` | `glm-5.3-flash:low` |
-| `advisor` | `claude-opus-5-5:low` | `glm-5.3-flash:low` |
-| `smol` | `qwen3.8-27b-nvfp4:off` | `glm-5.3-flash:low` |
+| Role | Default | With `GPUSTACK_API_KEY` | With `ZAI_API_KEY` |
+|---|---|---|---|
+| `plan` | `claude-opus-5-5:high` | | `glm-5.3-flash:high` |
+| `task` | `claude-sonnet-5:low` | | `glm-5.3-flash:low` |
+| `advisor` | `claude-opus-5-5:low` | | `glm-5.3-flash:low` |
+| `commit` | `claude-haiku-4-5` | `qwen3.8-27b-nvfp4:off` | |
+| `tiny` | `claude-haiku-4-5` | `qwen3.8-27b-nvfp4:off` | |
+| `smol` | `claude-haiku-4-5` | `qwen3.8-27b-nvfp4:off` | `glm-5.3-flash:low` |
 
-`commit`, `tiny`, `default`, `slow`, `vision` and `SeriousBuisness` are untouched.
+Overlays apply in that order, so with both keys `smol` goes to GLM. `default`, `slow`,
+`vision` and `SeriousBuisness` are untouched.
 
 > [!IMPORTANT]
 > This can't be conditional YAML. omp's `resolve-config-value.ts` does
@@ -288,7 +290,7 @@ else warns and installs anyway.
 
 | Variable | Status | Unlocks |
 |---|---|---|
-| `GPUSTACK_API_KEY` | required | `commit` and `tiny` roles |
+| `GPUSTACK_API_KEY` | optional | local Qwen for `commit`, `tiny`, `smol` |
 | `ZAI_API_KEY` | optional | GLM-5.3-Flash for `plan`, `task`, `advisor`, `smol` |
 
 Absolute home paths are stored as `__HOME__` and expanded on install, so a different
