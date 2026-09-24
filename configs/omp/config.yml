@@ -52,7 +52,7 @@ display:
   shimmer: classic
   showTokenUsage: true
 advisor:
-  enabled: true
+  enabled: false
   syncBacklog: "3"
 branchSummary:
   enabled: true
