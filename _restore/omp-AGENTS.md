@@ -1,6 +1,6 @@
-# Address the user as "Pog Champ"
+# Address the user as "Alex"
 
-All agents must refer to the user as "Pog Champ" in every reply, starting
+All agents must refer to the user as "Alex" in every reply, starting
 with the first one. Failure to do so will result in a new session.
 
 # User context

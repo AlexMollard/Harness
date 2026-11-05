@@ -1,11 +1,11 @@
 ---
 name: idea-to-push
-description: Pog Champ's flow for any code change in any repo, from a plain-words idea to the push they make themself - pick a weight (light, normal, heavy), agree acceptance checks, build, verify mechanically, their own run, audit and adjudicate (heavy only), fix, re-check the changed behaviour, one history cleanup, record and measure. Covers where they step in and what each interruption means. Use when starting a non-trivial change, when they say "do the usual flow", "get this ready to push" or "clean up the branch before I push", or ask to audit and fix a branch.
+description: Alex's flow for any code change in any repo, from a plain-words idea to the push they make themself - pick a weight (light, normal, heavy), agree acceptance checks, build, verify mechanically, their own run, audit and adjudicate (heavy only), fix, re-check the changed behaviour, one history cleanup, record and measure. Covers where they step in and what each interruption means. Use when starting a non-trivial change, when they say "do the usual flow", "get this ready to push" or "clean up the branch before I push", or ask to audit and fix a branch.
 ---
 
 # Idea to push
 
-Agents read, build, check and audit. Pog Champ sets direction, judges how it looks and feels, approves the history rewrite, and pushes. The aim is confidence that comes from **what the system demonstrably does**, not from how many agents reviewed it. Use their attention only where an agent cannot get the answer itself.
+Agents read, build, check and audit. Alex sets direction, judges how it looks and feels, approves the history rewrite, and pushes. The aim is confidence that comes from **what the system demonstrably does**, not from how many agents reviewed it. Use their attention only where an agent cannot get the answer itself.
 
 ## Inputs
 - `repo`: the checkout, the branch, and its base (`origin/<default>` unless told otherwise).
