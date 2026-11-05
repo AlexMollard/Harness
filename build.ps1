@@ -46,7 +46,13 @@ function Get-Stub {
     "@~/agent-core/adapters/$Harness.md"
     ""
   )
-  foreach ($f in $manifest[$Harness]) { $lines += "@~/agent-core/core/$f.md"; $lines += "" }
+  foreach ($f in $manifest[$Harness]) {
+    if ($f -eq '70-shared-memory' -and -not (Test-Path -LiteralPath (Join-Path $Home_ 'Axiom/integrations/instructions.md') -PathType Leaf)) {
+      Write-Host "  skipping optional Axiom instructions (~/Axiom/integrations/instructions.md not found)" -ForegroundColor DarkGray
+      continue
+    }
+    $lines += "@~/agent-core/core/$f.md"; $lines += ""
+  }
   ($lines -join "`n")
 }
 

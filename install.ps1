@@ -29,11 +29,68 @@ function Step { param([string]$m) Write-Host "`n$m" -ForegroundColor Cyan }
 function Ok { param([string]$m) Write-Host "  ok   $m" -ForegroundColor Green }
 function Warn { param([string]$m) Write-Host "  warn $m" -ForegroundColor Yellow }
 function Bad { param([string]$m) Write-Host "  FAIL $m" -ForegroundColor Red; $script:problems += $m }
+function Get-MemoryBlock {
+  param([string]$Text)
+  [regex]::Match($Text, '(?m)^memory:[^\r\n]*(?:\r?\n(?:[ \t]+[^\r\n]*|[ \t]*))*')
+}
+
+function Set-OmpMemoryOff {
+  param([string]$Text)
+  $block = Get-MemoryBlock $Text
+  if (-not $block.Success) { return $Text.TrimEnd("`r", "`n") + "`nmemory:`n  backend: `"off`"`n" }
+  $value = $block.Value
+  if ($value -notmatch '^memory:[ \t]*(?:#.*)?(?:\r?\n|$)') {
+    throw 'Cannot safely update the existing omp memory setting: expected a block mapping.'
+  }
+  if ($value -match '(?m)^  backend:') {
+    $value = [regex]::Replace($value, '(?m)^  backend:[^\r\n]*', '  backend: "off"')
+  }
+  else {
+    $value = [regex]::Replace($value, '^(memory:[^\r\n]*)', "`$1`n  backend: `"off`"")
+  }
+  return $Text.Substring(0, $block.Index) + $value + $Text.Substring($block.Index + $block.Length)
+}
+
+function Write-Crlf {
+  param([string]$Path, [string]$Text)
+  [System.IO.File]::WriteAllText($Path, (($Text -replace "`r`n", "`n") -replace "`n", "`r`n"))
+}
+
+function Preserve-MemorySettings {
+  param([string]$Src, [string]$Dest, [string]$Text)
+  if (-not (Test-Path -LiteralPath $Dest -PathType Leaf)) { return $Text }
+  $old = Get-Content -Raw -LiteralPath $Dest
+  if ($Src -eq (Join-Path $Cfg 'claude/settings.json')) {
+    $previous = ConvertFrom-Json -InputObject $old -AsHashtable
+    if ($previous.ContainsKey('autoMemoryEnabled')) {
+      $settings = ConvertFrom-Json -InputObject $Text -AsHashtable
+      $settings['autoMemoryEnabled'] = $previous['autoMemoryEnabled']
+      return (ConvertTo-Json -InputObject $settings -Depth 100) + "`n"
+    }
+  }
+  elseif ($Src -eq (Join-Path $Cfg 'omp/config.yml')) {
+    $block = Get-MemoryBlock $old
+    if ($block.Success) { return $Text.TrimEnd("`r", "`n") + "`n" + $block.Value.TrimEnd("`r", "`n") + "`n" }
+  }
+  return $Text
+}
+
+function Disable-CompetingMemory {
+  $claudePath = Join-Path $HOME '.claude/settings.json'
+  $ompPath = Join-Path $HOME '.omp/agent/config.yml'
+  $claude = ConvertFrom-Json -InputObject (Get-Content -Raw -LiteralPath $claudePath) -AsHashtable
+  $omp = Set-OmpMemoryOff (Get-Content -Raw -LiteralPath $ompPath)
+  $claude['autoMemoryEnabled'] = $false
+  Write-Crlf $claudePath ((ConvertTo-Json -InputObject $claude -Depth 100) + "`n")
+  Write-Crlf $ompPath $omp
+}
+
 
 function Install-File {
   param([string]$Src, [string]$Dest)
   if (-not (Test-Path $Src)) { Warn "missing in repo: $Src"; return }
   $text = (Get-Content -Raw $Src) -replace '__HOME__', $HOME.Replace('\', '\\')
+  $text = Preserve-MemorySettings $Src $Dest $text
   if ($WhatIf) {
     $state = if (Test-Path $Dest) { 'would REPLACE (backup kept)' } else { 'would create' }
     Write-Host "  $state $Dest" -ForegroundColor Yellow; return
@@ -41,7 +98,7 @@ function Install-File {
   $dir = Split-Path -Parent $Dest
   if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
   if (Test-Path $Dest) { Copy-Item $Dest "$Dest.pre-install" -Force }
-  [System.IO.File]::WriteAllText($Dest, (($text -replace "`r`n", "`n") -replace "`n", "`r`n"))
+  Write-Crlf $Dest $text
   Ok $Dest.Replace($HOME, '~')
 }
 
@@ -54,11 +111,12 @@ foreach ($t in @(
     @{ n = 'claude'; req = $true; why = 'Claude Code CLI' }
     @{ n = 'omp'; req = $false; why = 'omp harness' }
     @{ n = 'git'; req = $true; why = 'version control' }
+    @{ n = 'node'; req = $false; why = 'optional Axiom integration requires Node.js 22+' }
     @{ n = 'rtk'; req = $false; why = 'Bash PreToolUse hook' }
   )) {
   if (Get-Command $t.n -EA SilentlyContinue) { Ok "$($t.n) found" }
   elseif ($t.req) { Bad "$($t.n) not on PATH - $($t.why)" }
-  else { Warn "$($t.n) not on PATH - $($t.why); its hook will no-op" }
+  else { Warn "$($t.n) not on PATH - $($t.why)" }
 }
 
 # --- 2. secrets the exported config expects --------------------------------
@@ -134,6 +192,28 @@ if ($WhatIf) { Write-Host "  would run build.ps1 and sync-skills.ps1 -Link" -For
 else {
   & (Join-Path $Root 'build.ps1')
   & (Join-Path $Root 'sync-skills.ps1') -Link
+}
+
+Step "6b. wire optional Axiom integration"
+$axiomInstaller = Join-Path $HOME 'Axiom/scripts/install.mjs'
+$axiomConfig = if ($env:SHARED_BRAIN_CONFIG) { $env:SHARED_BRAIN_CONFIG } else {
+  $configBase = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { Join-Path $HOME '.config' }
+  Join-Path $configBase 'Axiom/config.json'
+}
+if (-not (Test-Path -LiteralPath $axiomInstaller -PathType Leaf)) {
+  Write-Host "  skipped: ~/Axiom/scripts/install.mjs not found" -ForegroundColor DarkGray
+}
+elseif (-not (Test-Path -LiteralPath $axiomConfig -PathType Leaf)) {
+  Write-Host "  skipped: private Axiom config not found ($axiomConfig)" -ForegroundColor DarkGray
+}
+elseif (-not (Get-Command node -EA SilentlyContinue)) {
+  Warn "Axiom integration skipped: node not on PATH"
+}
+elseif ($WhatIf) { Write-Host "  would run ~/Axiom/scripts/install.mjs" -ForegroundColor Yellow }
+else {
+  & node $axiomInstaller
+  if ($LASTEXITCODE -ne 0) { throw 'Axiom installation failed. Check its private configuration before retrying.' }
+  Disable-CompetingMemory
 }
 
 # --- 7. prove it -----------------------------------------------------------

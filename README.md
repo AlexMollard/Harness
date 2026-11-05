@@ -36,6 +36,11 @@ the result — stopping at the first problem rather than leaving you half-config
 > environment. They are never echoed, logged, passed on a command line, or committed.
 > No key is required — skip them all and you get a working Claude-only setup.
 
+Axiom is optional and lives in its [standalone private repository](https://github.com/AlexMollard/Axiom).
+Its configuration and vault are private and outside both repositories; follow the
+Axiom setup and recovery instructions if you want shared memory on this machine.
+Harness installation does not require Axiom or its vault.
+
 <details>
 <summary><b>What setup.bat actually does</b></summary>
 
@@ -58,6 +63,7 @@ installed *by* another (omp by bun, graphify by uv), that one is offered first.
 |---|---|---|
 | `git` | required | `winget install Git.Git` |
 | `claude` | required | `winget install Anthropic.ClaudeCode` |
+| `node` (22+) | required | `winget install --id OpenJS.NodeJS.LTS -e` |
 | `omp` | optional | `bun install -g @oh-my-pi/pi-coding-agent` |
 | `rtk` | optional | `winget install rtk-ai.rtk` |
 | `graphify` | optional | `uv tool install graphifyy` |
@@ -78,10 +84,10 @@ safe; every step is idempotent.
 
 | | |
 |---|---|
-| 📜 **Instructions** | 7 core files, 404 lines, read by both harnesses |
+| 📜 **Instructions** | 8 core entries, read by both harnesses |
 | 🧠 **Skills** | 8 always indexed, 108 on demand |
 | ⌨️ **Commands** | 3 slash commands, shared |
-| 🪝 **Hooks** | 5, including 2 discovery gates and 1 that blocks GitHub billing |
+| 🪝 **Hooks** | Discovery and billing guards; optional Axiom hooks are installed separately |
 | ⚙️ **Machine config** | Claude Code settings + hooks, omp config/models/roles |
 | 🔌 **MCP servers** | none, by measurement |
 
@@ -102,7 +108,7 @@ _restore/        every file verbatim as it was before unification
 
 ## The instruction set
 
-Loaded into every session on both harnesses.
+Loaded into every session on both harnesses, except the optional Axiom import.
 
 | File | Lines | Governs |
 |---|--:|---|
@@ -113,6 +119,7 @@ Loaded into every session on both harnesses.
 | `40-code-discovery.md` | 20 | Using `graphify` when a project has a graph |
 | `50-rtk.md` | 29 | RTK token-optimising CLI proxy |
 | `60-github-billing.md` | 42 | Zero GitHub spend — manual-dispatch workflows only, no metered storage |
+| `70-shared-memory.md` | 1 | Imports Axiom's contract when its standalone instructions exist |
 
 > [!TIP]
 > [`AUDIT.md`](AUDIT.md) measures what this costs per session, the contradictions found
@@ -122,6 +129,26 @@ Loaded into every session on both harnesses.
 `~/.claude/CLAUDE.md`, omp via the same stub in `~/.omp/agent/AGENTS.md`. Both resolve
 `@` imports natively, so **nothing is generated** and no copy can drift. Edit a file in
 `core/` and it takes effect at the next session start.
+
+### Optional Axiom integration
+
+[Axiom](https://github.com/AlexMollard/Axiom) supplies shared memory, native harness
+adapters and a local dashboard. Clone it to `~/Axiom` and configure its private
+vault separately; neither vault contents nor live configuration belong in Harness.
+When `~/Axiom/integrations/instructions.md` exists, `build.ps1` includes its
+contract through `core/70-shared-memory.md`; otherwise it skips that import.
+
+`install.ps1` invokes Axiom's installer only when `~/Axiom/scripts/install.mjs` and its
+private configuration exist and Node is available. The configuration defaults to
+`%LOCALAPPDATA%/Axiom/config.json` on Windows (or `~/.config/Axiom/config.json`
+without `LOCALAPPDATA`), and `SHARED_BRAIN_CONFIG` overrides it. Axiom owns its
+native hooks; see its repository for setup, linking its CLI, and recovery.
+Harness preserves existing Claude auto-memory and omp memory settings when installing
+its portable config. Only after Axiom's installer succeeds does it disable those
+competing stores; if Axiom is skipped or fails, their existing settings remain.
+Owner notes are protected by instructions and ordinary agent write guards, not
+isolated from unrestricted shell or code execution.
+
 
 ---
 
@@ -313,8 +340,8 @@ username on the next machine doesn't break anything.
 | **Live** | Asks each harness three questions whose answers appear **only** inside `core/` — a harness that failed to resolve its import answers `MISSING` |
 
 > [!TIP]
-> Hooks exit 0 silently by design so they can never block work — which also means a
-> broken one is invisible. These checks are what make it visible.
+> Discovery hooks exit 0 silently; billing and optional Axiom guards can deliberately
+> block an action. Exercise both allowed and denied paths instead of trusting file presence.
 
 ---
 

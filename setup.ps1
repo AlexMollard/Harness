@@ -62,6 +62,9 @@ $Tools = @(
   @{ n = 'git'; req = $true; why = 'version control'
     cmd = 'winget install --id Git.Git -e --accept-package-agreements --accept-source-agreements'
   }
+  @{ n = 'node'; req = $true; why = 'Shared Brain runtime (Node.js 22+)'
+    cmd = 'winget install --id OpenJS.NodeJS.LTS -e --accept-package-agreements --accept-source-agreements'
+  }
   @{ n = 'claude'; req = $true; why = 'Claude Code CLI'
     cmd = 'winget install --id Anthropic.ClaudeCode -e --accept-package-agreements --accept-source-agreements'
     note = 'winget builds do not auto-update; set CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE=1 if you want that'

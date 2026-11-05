@@ -4,6 +4,5 @@
   `Skill(skill: "<name>")`. Slash form: `/<name>`.
 - `/graphify` → invoke the `Skill` tool with `skill: "graphify"` before anything else.
 - Commands (`/pressure-test`, `/sidenote`, `/squash`) live in `~/.claude/commands/`.
-- Memory: file-based, one fact per file, under the session's memory directory.
-  Index each new memory with one line in `MEMORY.md`.
+- When Axiom is installed, follow its shared memory contract for durable memory.
 - Subagents: use the `Agent` tool per section 8.

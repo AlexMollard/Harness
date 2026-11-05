@@ -24,8 +24,6 @@ skills:
     - graphify-windows
 commands:
   enableClaudeUser: true
-memory:
-  backend: sharpshooter
 autolearn:
   enabled: true
   autoContinue: true
