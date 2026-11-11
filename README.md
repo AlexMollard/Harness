@@ -67,6 +67,7 @@ installed *by* another (omp by bun, graphify by uv), that one is offered first.
 | `omp` | optional | `bun install -g @oh-my-pi/pi-coding-agent` |
 | `rtk` | optional | `winget install rtk-ai.rtk` |
 | `graphify` | optional | `uv tool install graphifyy` |
+| `jscpd` | optional | `npm install -g jscpd` |
 
 > [!NOTE]
 > The PyPI package really is `graphifyy` — the plain name is being reclaimed upstream.
@@ -233,7 +234,7 @@ A blocking hook that cries wolf is one you learn to disable.
 ## Skills
 
 <details>
-<summary><b>Always indexed (8)</b> — junctioned into both harnesses</summary>
+<summary><b>Always indexed (9)</b> — junctioned into both harnesses</summary>
 
 <br>
 
@@ -247,6 +248,7 @@ A blocking hook that cries wolf is one you learn to disable.
 | `handoffplan` | Handoff, then a phased plan referencing it |
 | `pressure-test` | Test an approach against scalability, cost, efficiency |
 | `sidenote` | Park a thought without derailing the current task |
+| `dedupe-refactor` | Find duplicated logic, plan a consolidation, apply approved clusters |
 
 </details>
 

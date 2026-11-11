@@ -42,6 +42,7 @@ $GlobalSkills = @{
   'pressure-test'    = "$Root/skills/global/pressure-test"
   'sidenote'         = "$Root/skills/global/sidenote"
   'idea-to-push'     = "$Root/skills/global/idea-to-push"
+  'dedupe-refactor'  = "$Root/skills/global/dedupe-refactor"
 }
 
 # Slash commands are pooled the same way: union of what each harness had today.

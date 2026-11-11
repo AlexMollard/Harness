@@ -83,6 +83,9 @@ $Tools = @(
     cmd = 'uv tool install graphifyy'
     note = 'run "graphify install" afterwards to finish setup'
   }
+  @{ n = 'jscpd'; req = $false; why = 'clone detector - the dedupe-refactor skill uses it'
+    cmd = 'npm install -g jscpd'
+  }
 )
 
 # A winget or uv install lands outside this process's PATH, so a re-check would
