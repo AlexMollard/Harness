@@ -7,10 +7,15 @@ argument-hint: "[target-path] [focus] [--apply]"
 # Dedupe refactor
 
 Hands the brief in [prompt.md](prompt.md) to a subagent in two legs, analysis then
-edits, with the user's approval between them. Arguments: `$ARGUMENTS`
+edits, with the user's approval between them. Arguments: `$ARGUMENTS` (if that
+shows literally, take the arguments from the user's message).
+
+Works in any harness that can launch a subagent. Each leg is a fresh subagent; the
+plan file carries leg 1's findings into leg 2, so no harness needs to resume a
+finished agent.
 
 ## Inputs
-- `target` — repo or folder to analyse. Default: the session's working directory.
+- `target` — repo or folder to analyse. Default: the current working directory.
 - `focus` — optional narrowing (a subfolder, module or priority tier). Default: whole target.
 - `--apply` — auto-apply. Only when the user typed it or said so in words. Default: stop at the plan.
 
@@ -18,19 +23,24 @@ edits, with the user's approval between them. Arguments: `$ARGUMENTS`
 Copy this and tick it off as you go:
 ```
 - [ ] 1. Target resolved, git state checked
-- [ ] 2. Leg 1 (analysis) returned a plan with cluster IDs and a baseline
+- [ ] 2. Leg 1 (analysis) returned a plan with cluster IDs and a baseline; plan saved
 - [ ] 3. Plan relayed, approved cluster IDs recorded
 - [ ] 4. Branch agreed, leg 2 (edits) finished
 - [ ] 5. Diff read and checks re-run here
 ```
 
+## Subagent settings
+Launch each leg with the harness's subagent tool, a general-purpose agent and the
+strongest planning model it offers:
+- **Claude Code**: `Agent` tool, `subagent_type: general-purpose`, `model: opus`, `effort: high`.
+- **omp**: `task` tool, using the `plan` model role (not a model name).
+
 ## Procedure
-1. **Resolve the target.** If the session is not already in `target`, move there
-   first (`change_directory`). In a git repo, note uncommitted changes and tell the
-   user. The agent's edits must not mix into them.
-2. **Launch leg 1 (Phases 1–2, read-only).** Use one `Agent` call with
-   `subagent_type: general-purpose`, `model: opus` and `effort: high`. The prompt is
-   the full text of `prompt.md` verbatim, followed by:
+1. **Resolve the target.** Work from `target` as the working directory (in the
+   Claude desktop app, move the session there first). In a git repo, note any
+   uncommitted changes and tell the user. The agent's edits must not mix into them.
+2. **Launch leg 1 (Phases 1–2, read-only).** The prompt is the full text of
+   `prompt.md` verbatim, followed by:
    ```
    # Run parameters
    - Target: <absolute target path>
@@ -40,19 +50,27 @@ Copy this and tick it off as you go:
    - Return the Phase 2 plan in full as your final report.
    ```
    The agent sees none of this conversation, so put every constraint into the parameters.
-3. **Relay the plan.** Show the user the clusters (ID, tier, locations, proposed
-   abstraction, risk, coverage, recommendation), the baseline, and what was not
-   examined. Ask which cluster IDs to apply. If the plan has no cluster IDs or no
-   baseline, send it back to the same agent to complete before relaying.
-4. **Launch leg 2 (Phase 3) on approval.** In a git repo, propose a branch first
-   and ask whether the agent may commit. Continue the *same* agent with `SendMessage`
-   so it keeps its analysis: "Approved: C1, C3. Run Phase 3 for these only, in
-   priority order. Commits: <answer>. Report each cluster's test, lint, type-check
-   and detector output, and any cluster you reverted."
+3. **Save and relay the plan.** If the plan has no cluster IDs or no baseline, launch
+   leg 1 again with that gap named. Save the report verbatim yourself (subagents may
+   not be able to write files) to `dedupe-plan.md` in the session's temp or scratch
+   directory, not inside `target`. Show the user the clusters (ID, tier, locations,
+   proposed abstraction, risk, coverage, recommendation), the baseline, and what was
+   not examined. Ask which cluster IDs to apply.
+4. **Launch leg 2 (Phase 3) on approval.** In a git repo, propose a branch first and
+   ask whether the agent may commit. Launch a fresh subagent with the same settings.
+   Its prompt is the full text of `prompt.md` verbatim, then the saved plan verbatim,
+   then:
+   ```
+   # Run parameters
+   - Target: <absolute target path>
+   - Mode: Phase 2 is done; the approved plan is above. Run Phase 3 only, for clusters <C1, C3>, in priority order. Before editing a cluster, re-read its locations and stop on that cluster if the code no longer matches the plan.
+   - Commits: <answer>
+   - Report each cluster's test, lint, type-check and detector output, and any cluster you reverted.
+   ```
 5. **Verify before reporting done.** The agent's report is not proof. Read the diff
    and confirm each changed file maps to an approved cluster. Then re-run the tests,
-   lint and type-check yourself and compare against the leg-1 baseline. If a check
-   regressed, send it back to the agent (step 4) and loop until it is clean, or
+   lint and type-check yourself and compare against the plan's baseline. If a check
+   regressed, launch leg 2 again for that cluster with the failure output added, or
    revert that cluster. Report what changed, what was skipped or reverted, and each
    check's real output.
 
