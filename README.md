@@ -195,14 +195,12 @@ without pushing that onto everyone who clones the repo.
 |---|---|---|
 | `PreToolUse` Bash | `rtk hook claude` | always — routes commands through the RTK proxy |
 | `PreToolUse` Grep/Glob | `graphify-discovery-gate` | `graphify-out/graph.json` exists |
-| `PreToolUse` WebFetch | `context7-docs-gate` | the URL host is a known docs host |
 | `PreToolUse` Write/Edit/Bash | `github-billing-gate` | **blocks** anything that would bill GitHub |
 | `PostToolUse` | telemetry | always |
 
-Both discovery gates share the property that makes a hook survive daily use: **a binary
-trigger, never a guess at intent.** They stay silent everywhere else, never block, and
-exit 0 on malformed input. Add a docs host via `DOCS_HOSTS` in
-[`configs/claude/hooks/context7-docs-gate`](configs/claude/hooks/context7-docs-gate).
+The discovery gate has the property that makes a hook survive daily use: **a binary
+trigger, never a guess at intent.** It stays silent everywhere else, never blocks, and
+exits 0 on malformed input.
 
 ### The billing gate is different — it blocks
 

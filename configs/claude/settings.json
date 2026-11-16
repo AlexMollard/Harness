@@ -22,16 +22,6 @@
         ]
       },
       {
-        "matcher": "WebFetch",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/context7-docs-gate",
-            "timeout": 5
-          }
-        ]
-      },
-      {
         "matcher": "Write|Edit|Bash",
         "hooks": [
           {
@@ -85,7 +75,6 @@
   "enableWorkflows": true,
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
-    "context7@claude-plugins-official": true,
     "clangd-lsp@claude-plugins-official": true
   },
   "effortLevel": "medium",

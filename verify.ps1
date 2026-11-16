@@ -135,16 +135,6 @@ try {
     if (-not (Test-Hook 'billing gate blocks metered storage  ' 'github-billing-gate' $lfs 'speaks')) { $fail++ }
     if (-not (Test-Hook 'billing gate ignores ordinary work   ' 'github-billing-gate' '{"tool_name":"Bash","tool_input":{"command":"git status"}}' 'silent')) { $fail++ }
   }
-
-  if (Test-Path "$HOME/.claude/hooks/context7-docs-gate") {
-    # the hook deliberately says nothing unless the plugin is enabled
-    $on = (Get-Content -Raw $sj -EA SilentlyContinue) -match '"context7@claude-plugins-official"\s*:\s*true'
-    if ($on) {
-      if (-not (Test-Hook 'context7 gate speaks on a docs host  ' 'context7-docs-gate' '{"tool_input":{"url":"https://kotlinlang.org/docs/x"}}' 'speaks')) { $fail++ }
-    }
-    else { Write-Host "  skip context7 gate - plugin not enabled" -ForegroundColor DarkGray }
-    if (-not (Test-Hook 'context7 gate silent elsewhere        ' 'context7-docs-gate' '{"tool_input":{"url":"https://news.ycombinator.com/"}}' 'silent')) { $fail++ }
-  }
 }
 finally { Remove-Item $fix -Recurse -Force -EA SilentlyContinue }
 
