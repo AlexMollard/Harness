@@ -75,7 +75,13 @@
   "enableWorkflows": true,
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
-    "clangd-lsp@claude-plugins-official": true
+    "clangd-lsp@claude-plugins-official": true,
+    "ponytail@ponytail": true
+  },
+  "extraKnownMarketplaces": {
+    "ponytail": {
+      "source": { "source": "github", "repo": "DietrichGebert/ponytail" }
+    }
   },
   "effortLevel": "medium",
   "advisorModel": "opus",

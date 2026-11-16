@@ -164,12 +164,6 @@ if (Test-Path $cy) {
   $used = Select-String -Path $cy -Pattern '^\s+[A-Za-z][A-Za-z0-9_-]*:\s*([a-z0-9_-]+)/' |
   ForEach-Object { $_.Matches[0].Groups[1].Value } | Sort-Object -Unique
 }
-# What an optional key buys you, straight from the role policy.
-$unlocks = @{}
-$rp = Join-Path $Cfg 'omp/roles.psd1'
-if (Test-Path $rp) {
-  foreach ($o in (Import-PowerShellDataFile $rp).overlays) { $unlocks[$o.key] = $o.why }
-}
 
 function Read-Secret {
   param([string]$Name)
@@ -190,7 +184,6 @@ foreach ($prov in $providerKey.Keys) {
 
   if ($cur) { Ok $v "$tag - already set"; continue }
   if ($required) { No $v "$tag - $prov models will not work" } else { Opt $v "$tag" }
-  if ($unlocks[$v]) { Say $unlocks[$v] }
 
   if ($NonInteractive -or $WhatIf) {
     if ($required) { $blocked = $true }

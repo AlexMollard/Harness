@@ -132,8 +132,8 @@ if (Test-Path $mf) {
   }
 }
 # A key is REQUIRED only if the baseline config.yml actually routes a role at that
-# provider. Anything else - zai, say - merely unlocks an overlay, so its absence is
-# a normal, fully working install rather than a failure.
+# provider. Any other provider key is optional, so its absence is a normal, fully
+# working install rather than a failure.
 $used = @()
 $cy = Join-Path $Cfg 'omp/config.yml'
 if (Test-Path $cy) {
@@ -167,8 +167,7 @@ foreach ($f in 'config.yml', 'mcp.json', 'models.yml') {
 
 # --- 4. omp model roles ----------------------------------------------------
 Step "4. omp model roles"
-if ($WhatIf) { Write-Host "  would apply configs/omp/roles.psd1 to ~/.omp/agent/config.yml" -ForegroundColor Yellow }
-else { & (Join-Path $Root 'set-omp-roles.ps1') -Path "$HOME/.omp/agent/config.yml" -Mode auto | Out-Null }
+Write-Host "  owned by omp-maestro: run /maestro <ensemble> inside omp" -ForegroundColor DarkGray
 
 # --- 5. omp managed skills -------------------------------------------------
 Step "5. omp managed skills"

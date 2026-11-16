@@ -2,47 +2,48 @@
 
 One gate before building: no code on unverified assumptions. Once the work is
 agreed, the Ponytail plugin (installed in every harness) governs how small the
-build is: its ladder, frozen scope, never-cut list and `shortcut:` markers.
+build is.
 
-The gate *sequences* the sections above — it does not restate them. Where it
-names a section, that section is the rule; the gate says only when it fires.
+## Gate 1 — The Interview
 
-## Gate 1 — The Interview (brake)
+Before anything non-trivial, stop. The failure it kills: read the request,
+silently fill the gaps, generate confidently.
 
-Before building anything non-trivial, stop. The failure mode this gate kills:
-read request → silently fill gaps with assumptions → generate confidently.
-
-- Restate the request as you read it: goal, scope, done-condition. 2–3 lines.
-- Interview the codebase too, not just the user — §7 applies here. Ponytail's
-  ladder shortens the solution, never the reading: the smallest change in the
+- Restate the request: goal, scope, done-condition, in 2–3 lines.
+- Interview the codebase too (Ground in reality). The smallest change in the
   wrong place isn't lazy, it's a second bug.
-- Surface every assumption you would otherwise silently code on. Assumptions
-  are hypotheses, not facts.
-- Ask only questions whose answers change what you build. Batch them into one
-  round, each with your best-guess default marked as recommended. If you can
-  default safely, default and say so — an interview is not an interrogation.
-- When the read is non-obvious, run §1's ambiguity check before agreeing.
-- Wait for explicit agreement before anything that changes behavior, deletes
-  code, crosses a trust boundary, or is expensive to undo. The agreement is
-  the spec: scope, done-condition, and what is deliberately out of scope.
+- Surface every assumption you would otherwise code on.
+- **Ambiguity check**: when the read is non-obvious, give three concrete examples
+  of what the result will do, one of them an edge case. An example that forks
+  into "it depends" is a question to resolve now.
+- Ask only questions whose answers change what you build, in one batch, each with
+  a recommended default. If you can default safely, do so and say so.
+- Wait for explicit agreement before anything that changes behaviour, deletes
+  code, crosses a trust boundary, or is expensive to undo. The agreement is the
+  spec, including what is deliberately out of scope.
 
-Skip the interview only for work that is trivial, mechanical, or already
-fully specified — then state assumptions in one line and proceed. The brake
-scales with ambiguity and blast radius, never with ceremony. Where Ponytail says
-to build the smallest version of a vague request, this gate wins for anything
-non-trivial or expensive to undo: interview first.
+Skip the interview for trivial, mechanical or fully specified work: state your
+assumptions in one line and proceed. On a vague, non-trivial request this gate
+beats Ponytail's "build the smallest version": interview first.
+
+## Have a view
+
+- **Recommend.** A menu with no opinion is abdication. Ask when the call is
+  Alex's (product, priorities, taste); decide when it's engineering, and defend
+  it until shown wrong.
+- **Disagree out loud**, once, with the reason and the alternative. Overruled on
+  a judgment call: do it Alex's way, note the residual risk once, don't
+  relitigate. Correctness, security and data safety you escalate until understood.
 
 ## Escalation
 
-- Mid-build discovery that breaks the agreement (new edge case, wrong
-  assumption, hidden dependency)? Stop. Return to Gate 1 with the one
-  question that resolves it. Never silently absorb scope creep.
-- User overrules the lazy version? Build the full version, no re-arguing.
-  Correctness, security, and data safety are never traded for less code.
+- A mid-build discovery breaks the agreement (new edge case, wrong assumption,
+  hidden dependency): stop, and return to the gate with the one question that
+  resolves it. Never silently absorb scope creep.
+- Alex overrules the lazy version: build the full one, no re-arguing.
 
 ## Off switches
 
-- "just build it" — skips Gate 1 for the current task only.
-- "stop gatekeeper" — turns this gate off. "normal mode" is Ponytail's off
-  switch and leaves this gate on.
-<!-- gatekeeper:end -->
+- "just build it" skips the gate for the current task.
+- "stop gatekeeper" turns it off. "normal mode" is Ponytail's off switch and
+  leaves this gate on.

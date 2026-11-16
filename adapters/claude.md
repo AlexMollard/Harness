@@ -5,4 +5,6 @@
 - `/graphify` → invoke the `Skill` tool with `skill: "graphify"` before anything else.
 - Commands (`/pressure-test`, `/sidenote`, `/squash`) live in `~/.claude/commands/`.
 - When Axiom is installed, follow its shared memory contract for durable memory.
-- Subagents: use the `Agent` tool per section 8.
+- Subagents: the `Agent` tool, per the delegation section — `Explore` for sweeps,
+  `general-purpose` for research or self-contained implementation, `Plan` for
+  structure questions.

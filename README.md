@@ -54,7 +54,7 @@ rather than a batch copy that drifts.
 |:--:|---|---|
 | 1 | Check each tool below, show the exact command, install on `y` | Stops only if a **required** tool is still missing |
 | 2 | Work out which API keys the config needs, prompt for missing ones | Stops only if a **required** key is skipped |
-| 3 | Hand over to `install.ps1` — config, roles, skills, wiring, verify | Stops at the first failed gate |
+| 3 | Hand over to `install.ps1` — config, skills, wiring, verify | Stops at the first failed gate |
 
 Nothing installs silently — every command is printed and needs a `y`. Where a tool is
 installed *by* another (omp by bun, graphify by uv), that one is offered first.
@@ -89,7 +89,7 @@ safe; every step is idempotent.
 | 🧠 **Skills** | 8 always indexed, 108 on demand |
 | ⌨️ **Commands** | 3 slash commands, shared |
 | 🪝 **Hooks** | Discovery and billing guards; optional Axiom hooks are installed separately |
-| ⚙️ **Machine config** | Claude Code settings + hooks, omp config/models/roles |
+| ⚙️ **Machine config** | Claude Code settings + hooks, omp config/models (roles belong to omp-maestro) |
 | 🔌 **MCP servers** | none, by measurement |
 
 ```
@@ -101,7 +101,6 @@ skills/
   global/        always-indexed skills
   managed/       108 omp autolearn skills
 configs/         this machine's config, secrets redacted
-  omp/roles.psd1 which model serves each omp role
 _restore/        every file verbatim as it was before unification
 ```
 
@@ -113,18 +112,17 @@ Loaded into every session on both harnesses, except the optional Axiom import.
 
 | File | Lines | Governs |
 |---|--:|---|
-| `00-identity.md` | 9 | Form of address, CRLF output |
-| `10-commit-style.md` | 34 | Imperative subject, no prefixes/emoji/attribution |
-| `20-principles.md` | 153 | 8 sections: think first, simplicity (defers to Ponytail), surgical changes, goal-driven execution, time recalibration, skillify, ground-in-reality, delegate-by-default |
-| `30-gatekeeper.md` | 48 | The Interview gate before building; Ponytail governs the build |
-| `40-code-discovery.md` | 20 | Using `graphify` when a project has a graph |
-| `50-rtk.md` | 29 | RTK token-optimising CLI proxy |
-| `60-github-billing.md` | 42 | Zero GitHub spend — manual-dispatch workflows only, no metered storage |
+| `00-identity.md` | 13 | Form of address, CRLF output |
+| `10-commit-style.md` | 17 | Imperative subject, no prefixes/emoji/attribution |
+| `20-principles.md` | 75 | Don't downgrade on time, done means it ran, ground in reality, leave the neighbourhood alone, skillify, delegate by default |
+| `30-gatekeeper.md` | 49 | The Interview gate and having a view before building; Ponytail governs the build |
+| `40-code-discovery.md` | 12 | Using `graphify` when a project has a graph |
+| `50-rtk.md` | 6 | RTK token-optimising CLI proxy |
+| `60-github-billing.md` | 19 | Zero GitHub spend — manual-dispatch workflows only, no metered storage |
 | `70-shared-memory.md` | 1 | Imports Axiom's contract when its standalone instructions exist |
 
-> [!TIP]
-> [`AUDIT.md`](AUDIT.md) measures what this costs per session, the contradictions found
-> and fixed, and 2026 research on whether files like this help at all.
+How small to build is not here: the [Ponytail](https://github.com/DietrichGebert/ponytail)
+plugin, installed in both harnesses, owns that.
 
 **How each harness reads it** — Claude Code via `@~/agent-core/...` in
 `~/.claude/CLAUDE.md`, omp via the same stub in `~/.omp/agent/AGENTS.md`. Both resolve
@@ -155,30 +153,8 @@ isolated from unrestricted shell or code execution.
 
 ## Model roles
 
-omp's roles are assigned from what the machine can actually reach, per
-[`configs/omp/roles.psd1`](configs/omp/roles.psd1).
-
-| Role | Default | With `GPUSTACK_API_KEY` | With `ZAI_API_KEY` |
-|---|---|---|---|
-| `plan` | `claude-opus-5-5:high` | | `glm-5.3-flash:high` |
-| `task` | `claude-sonnet-5:low` | | `glm-5.3-flash:low` |
-| `advisor` | `claude-opus-5-5:low` | | `glm-5.3-flash:low` |
-| `commit` | `claude-haiku-4-5` | `qwen3.8-27b-nvfp4:off` | |
-| `tiny` | `claude-haiku-4-5` | `qwen3.8-27b-nvfp4:off` | |
-| `smol` | `claude-haiku-4-5` | `qwen3.8-27b-nvfp4:off` | `glm-5.3-flash:low` |
-
-Overlays apply in that order, so with both keys `smol` goes to GLM. `default`, `slow`,
-`vision` and `SeriousBuisness` are untouched.
-
-> [!IMPORTANT]
-> This can't be conditional YAML. omp's `resolve-config-value.ts` does
-> `return envValue || valueConfig` — an unset env var resolves to the **literal
-> string**, which is then sent as the bearer token and 401s. There is no graceful
-> runtime degradation, so the branch has to happen when config is written.
-
-Role assignment is install-time policy, not machine state, so `export-config.ps1`
-normalises it back to the default before committing. A PC holding a Z.AI key runs GLM
-without pushing that onto everyone who clones the repo.
+omp's model roles belong to the omp-maestro plugin, not this repo. Pick an ensemble
+with `/maestro <ensemble>` inside omp; `install.ps1` leaves roles alone.
 
 ---
 
@@ -336,7 +312,6 @@ username on the next machine doesn't break anything.
 |---|---|
 | **Wiring** | Each harness file actually imports `agent-core` |
 | **Hooks** | Every hook wired in `settings.json` exists, and each gate speaks *and stays silent* in the right conditions |
-| **Roles** | Installed roles match the policy for this machine's credentials, and every provider a role names is defined |
 | **Live** | Asks each harness three questions whose answers appear **only** inside `core/` — a harness that failed to resolve its import answers `MISSING` |
 
 > [!TIP]
@@ -354,7 +329,6 @@ username on the next machine doesn't break anything.
 | `export-config.ps1` | Machine → repo, secrets redacted |
 | `build.ps1` | Write the instruction import stubs |
 | `sync-skills.ps1` | Pool and junction skills + commands |
-| `set-omp-roles.ps1` | Apply the model-role policy |
 | `verify.ps1` | Prove it all still works |
 
 <details>

@@ -1,29 +1,35 @@
 modelRoles:
   plan: anthropic/claude-opus-5-5:high
-  task: anthropic/claude-sonnet-5:low
-  commit: anthropic/claude-haiku-4-5
-  advisor: anthropic/claude-opus-5-5:low
-  tiny: anthropic/claude-haiku-4-5
+  task: openai-codex/gpt-6.1-sol:medium
+  commit: openai-codex/gpt-6-luna:low
+  advisor: openai-codex/gpt-5.6-sol:medium
+  tiny: openai-codex/gpt-6-luna:low
   default: anthropic/claude-opus-5-5:high
-  smol: anthropic/claude-haiku-4-5
-  slow: anthropic/claude-opus-5-5:max
-  vision: anthropic/claude-sonnet-5:medium
+  smol: openai-codex/gpt-6-luna:low
+  slow: anthropic/claude-opus-5-5:high
+  vision: anthropic/claude-sonnet-5-5:medium
   SeriousBuisness: anthropic/claude-opus-5-5:max
-  web: anthropic/claude-haiku-4-5
+  web: web/exa
+  designer: anthropic/claude-sonnet-5-5:medium
+  memory: openai-codex/gpt-6-luna:low
+  judge: openai-codex/gpt-6-luna:low
+disabledExtensions:
+  - extension-module:jev-router
 symbolPreset: nerd
 composer:
   shape: band
 theme:
   dark: dark-gruvbox
-setupVersion: 2
-enabledModels:
-  []
+setupVersion: 3
+enabledModels: []
 skills:
   enableClaudeUser: true
   ignoredSkills:
     - graphify-windows
 commands:
   enableClaudeUser: true
+memory:
+  backend: "off"
 autolearn:
   enabled: true
   autoContinue: true
@@ -60,30 +66,32 @@ compaction:
 retry:
   fallbackChains:
     web:
-      - openai-codex/gpt-5.6-luna
-      - web/zai
-      - xai/grok-4.5
-      - web/perplexity
-      - google/gemini-2.5-flash
-      - web/exa
-      - web/tinyfish
-      - web/jina
-      - web/kagi
-      - web/tavily
-      - web/firecrawl
-      - web/brave
-      - web/kimi
-      - web/parallel
-      - web/synthetic
-      - web/searxng
-      - web/startpage
       - web/duckduckgo
-      - web/ecosia
-      - web/google
-      - web/mojeek
-      - web/public
-      - google-antigravity/gemini-2.5-flash
-      - openai-codex/gpt-5.6
-      - openai-codex/gpt-5.5
-      - xai-oauth/grok-4.5
-      - web/ollama
+    default:
+      - openai-codex/gpt-5.6-sol:medium
+      - openai-codex/gpt-6-sol:medium
+    plan:
+      - openai-codex/gpt-5.6-sol:high
+    slow:
+      - openai-codex/gpt-5.6-sol:high
+    task:
+      - openai-codex/gpt-6-sol:medium
+      - anthropic/claude-sonnet-5-5:medium
+    designer:
+      - openai-codex/gpt-5.6-sol:medium
+    vision:
+      - openai-codex/gpt-5.6-sol:medium
+    advisor:
+      - openai-codex/gpt-6-sol:medium
+    smol:
+      - openai-codex/gpt-6-sol:low
+    tiny:
+      - openai-codex/gpt-6-sol:low
+    memory:
+      - openai-codex/gpt-6-sol:low
+    commit:
+      - openai-codex/gpt-6-sol:low
+    judge:
+      - openai-codex/gpt-6-sol:low
+update:
+  auto: true

@@ -5,5 +5,5 @@
 - Commands from `~/.claude/commands` are available as omp slash commands.
 - When Axiom is installed, follow its shared memory contract for durable memory.
 - Model roles (`plan`, `task`, `smol`, `slow`, `advisor`) are configured in
-  `config.yml` — map section 8's effort table onto those roles rather than naming
-  models directly.
+  `config.yml` — map the delegation effort table onto those roles rather than
+  naming models directly.
