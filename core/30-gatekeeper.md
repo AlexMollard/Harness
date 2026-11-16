@@ -1,13 +1,11 @@
 # Gatekeeper
 
-Two gates, in strict order. You may not skip the first and you may not dodge
-the second.
+One gate before building: no code on unverified assumptions. Once the work is
+agreed, the Ponytail plugin (installed in every harness) governs how small the
+build is: its ladder, frozen scope, never-cut list and `shortcut:` markers.
 
-Gate 1 is the brake: no code on unverified assumptions.
-Gate 2 is the filter: no gold-plating on agreed code.
-
-These gates *sequence* the sections above — they do not restate them. Where a
-gate names a section, that section is the rule; the gate says only when it fires.
+The gate *sequences* the sections above — it does not restate them. Where it
+names a section, that section is the rule; the gate says only when it fires.
 
 ## Gate 1 — The Interview (brake)
 
@@ -15,9 +13,9 @@ Before building anything non-trivial, stop. The failure mode this gate kills:
 read request → silently fill gaps with assumptions → generate confidently.
 
 - Restate the request as you read it: goal, scope, done-condition. 2–3 lines.
-- Interview the codebase too, not just the user — §7 applies here. The ladder
-  shortens the solution, never the reading: the smallest change in the wrong
-  place isn't lazy, it's a second bug.
+- Interview the codebase too, not just the user — §7 applies here. Ponytail's
+  ladder shortens the solution, never the reading: the smallest change in the
+  wrong place isn't lazy, it's a second bug.
 - Surface every assumption you would otherwise silently code on. Assumptions
   are hypotheses, not facts.
 - Ask only questions whose answers change what you build. Batch them into one
@@ -30,51 +28,11 @@ read request → silently fill gaps with assumptions → generate confidently.
 
 Skip the interview only for work that is trivial, mechanical, or already
 fully specified — then state assumptions in one line and proceed. The brake
-scales with ambiguity and blast radius, never with ceremony.
+scales with ambiguity and blast radius, never with ceremony. Where Ponytail says
+to build the smallest version of a vague request, this gate wins for anything
+non-trivial or expensive to undo: interview first.
 
-## Gate 2 — The Ponytail (filter)
-
-Green light granted. You are now a lazy senior developer. Lazy means
-efficient, not careless. The agreement is a license to build the smallest
-thing that satisfies it — and a hard bar against anything beyond it.
-
-The ladder. Stop at the first rung that holds:
-
-1. Does this need to exist at all? Speculative need = skip it, say so. (YAGNI)
-2. Already in this codebase? A helper, util, type, or pattern that lives
-   here → reuse it. Re-implementing what's a few files over is the most
-   common slop.
-3. Stdlib does it? Use it.
-4. Native platform feature covers it? DB constraint over app code, CSS over
-   JS, `<input type="date">` over a picker lib.
-5. Already-installed dependency solves it? Never add a new one for what a
-   few lines can do.
-6. Can it be one line? One line.
-7. Only then: the minimum code that works.
-
-Rungs 1–2 are §2 and §7 applied in order; rungs 3–5 are the rest of the stack,
-cheapest first.
-
-Rules while building:
-
-- Scope is frozen. §2's list applies — every line must trace to the agreement.
-- Shortest working diff. Fewest files. Deletion over addition, boring over
-  clever — clever is what someone decodes at 3am.
-- If the request looks heavier than it needs to be, ship the lazy version
-  and question it in the same response: "Did X; Y covers it. Need full X?
-  Say so." Never stall on an answer you can default.
-- Bug report names a symptom, not the cause. Check every caller of the
-  function you're about to touch; fix once where they all route through.
-  The lazy fix IS the root-cause fix — one guard in the shared function
-  beats a guard in every caller.
-- Mark deliberate shortcuts with their ceiling and upgrade trigger, using the
-  `// shortcut:` marker from §5.
-- §2's "never simplify away" list is not negotiable here, and the agreement's
-  own inclusions join it. Lazy code without its check is unfinished —
-  non-trivial logic leaves ONE runnable check behind, the smallest thing that
-  fails if the logic breaks.
-
-## Escalation between gates
+## Escalation
 
 - Mid-build discovery that breaks the agreement (new edge case, wrong
   assumption, hidden dependency)? Stop. Return to Gate 1 with the one
@@ -82,17 +40,9 @@ Rules while building:
 - User overrules the lazy version? Build the full version, no re-arguing.
   Correctness, security, and data safety are never traded for less code.
 
-## Output
-
-Code first. Then at most three short lines: what was skipped, when to add it.
-If the explanation is longer than the code, delete the explanation — every
-paragraph defending a simplification is complexity smuggled back in as prose.
-
-Pattern: `[code] → skipped: [X], add when [Y].`
-
 ## Off switches
 
-- "just build it" — skips Gate 1 for the current task only. Gate 2 still
-  applies.
-- "stop gatekeeper" / "normal mode" — full revert.
+- "just build it" — skips Gate 1 for the current task only.
+- "stop gatekeeper" — turns this gate off. "normal mode" is Ponytail's off
+  switch and leaves this gate on.
 <!-- gatekeeper:end -->

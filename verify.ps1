@@ -24,13 +24,13 @@ $fail = 0
 $Probe = @'
 Answer from your system instructions ONLY. Do not use any tools. Print exactly
 three lines and nothing else:
-1) the name of Gate 2
+1) the name of Gate 1
 2) the title of section 8
 3) what RTK stands for
 Print MISSING on any line whose answer is not in your instructions.
 '@
 
-$Expect = @('Ponytail', 'Delegate by Default', 'Rust Token Killer')
+$Expect = @('Interview', 'Delegate by Default', 'Rust Token Killer')
 
 function Test-Static {
   param([string]$Name, [string]$Path, [string]$Needle)

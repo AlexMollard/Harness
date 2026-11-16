@@ -115,8 +115,8 @@ Loaded into every session on both harnesses, except the optional Axiom import.
 |---|--:|---|
 | `00-identity.md` | 9 | Form of address, CRLF output |
 | `10-commit-style.md` | 34 | Imperative subject, no prefixes/emoji/attribution |
-| `20-principles.md` | 172 | 8 sections: think first, simplicity, surgical changes, goal-driven execution, time recalibration, skillify, ground-in-reality, delegate-by-default |
-| `30-gatekeeper.md` | 98 | Two gates — the Interview and the Ponytail ladder |
+| `20-principles.md` | 153 | 8 sections: think first, simplicity (defers to Ponytail), surgical changes, goal-driven execution, time recalibration, skillify, ground-in-reality, delegate-by-default |
+| `30-gatekeeper.md` | 48 | The Interview gate before building; Ponytail governs the build |
 | `40-code-discovery.md` | 20 | Using `graphify` when a project has a graph |
 | `50-rtk.md` | 29 | RTK token-optimising CLI proxy |
 | `60-github-billing.md` | 42 | Zero GitHub spend — manual-dispatch workflows only, no metered storage |
