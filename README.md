@@ -67,6 +67,7 @@ installed *by* another (omp by bun), that one is offered first.
 | `omp` | optional | `bun install -g @oh-my-pi/pi-coding-agent` |
 | `rtk` | optional | `winget install rtk-ai.rtk` |
 | `jscpd` | optional | `npm install -g jscpd` |
+| `plannotator` | optional | binary from GitHub Releases, SHA-256 checked (`Install-Plannotator` in `setup.ps1`); the Claude plugin needs it |
 
 > [!NOTE]
 > winget builds of Claude Code don't auto-update; set
