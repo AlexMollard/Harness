@@ -1,5 +1,19 @@
 {
-  "model": "opus[1m]",
+  "model": "opus",
+  "permissions": {
+    "defaultMode": "auto"
+  },
+  "skillOverrides": {
+    "handoff": "off",
+    "handoffplan": "off"
+  },
+  "env": {
+    "PONYTAIL_MAP": "0",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+    "PLANNOTATOR_SHARE": "disabled",
+    "PLANNOTATOR_AI": "disabled",
+    "PLANNOTATOR_JINA": "0"
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -8,16 +22,6 @@
           {
             "type": "command",
             "command": "rtk hook claude"
-          }
-        ]
-      },
-      {
-        "matcher": "Grep|Glob",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/graphify-discovery-gate",
-            "timeout": 5
           }
         ]
       },
@@ -52,23 +56,6 @@
             "timeout": 5
           }
         ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "pwsh",
-            "args": [
-              "-NoProfile",
-              "-ExecutionPolicy",
-              "Bypass",
-              "-File",
-              "__HOME__\\.aspire\\hooks\\track-telemetry.ps1"
-            ],
-            "timeout": 30
-          }
-        ]
       }
     ]
   },
@@ -76,18 +63,25 @@
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
     "clangd-lsp@claude-plugins-official": true,
-    "ponytail@ponytail": true
+    "ponytail@ponytail": true,
+    "plannotator@plannotator": true
   },
   "extraKnownMarketplaces": {
     "ponytail": {
       "source": { "source": "github", "repo": "DietrichGebert/ponytail" }
+    },
+    "plannotator": {
+      "source": { "source": "github", "repo": "backnotprop/plannotator" }
     }
   },
-  "effortLevel": "medium",
+  "effortLevel": "high",
+  "modelSettings": {
+    "claude-opus-5-5": { "effortLevel": "high" }
+  },
   "advisorModel": "opus",
   "autoUpdatesChannel": "latest",
   "skipWorkflowUsageWarning": true,
-  "verbose": true,
+  "verbose": false,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "autoCompactWindow": 500000

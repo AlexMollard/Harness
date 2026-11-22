@@ -178,11 +178,11 @@ with `/maestro <ensemble>` inside omp; `install.ps1` leaves roles alone.
 |---|---|---|
 | `PreToolUse` Bash | `rtk hook claude` | always — routes commands through the RTK proxy |
 | `PreToolUse` Write/Edit/Bash | `github-billing-gate` | **blocks** anything that would bill GitHub |
-| `PostToolUse` | telemetry | always |
+| `PreToolUse` / `PostToolUse` Write | `crlf-normalize.mjs` | preserves the file's line endings |
 
-The discovery gate has the property that makes a hook survive daily use: **a binary
-trigger, never a guess at intent.** It stays silent everywhere else, never blocks, and
-exits 0 on malformed input.
+Claude settings disable Ponytail's automatic repository map (`PONYTAIL_MAP=0`),
+which otherwise walks non-repository folders such as system Temp. Ponytail's rules
+and commands remain enabled. Aspire's per-tool telemetry hook is not installed.
 
 ### The billing gate is different — it blocks
 

@@ -83,7 +83,38 @@ $Tools = @(
   @{ n = 'jscpd'; req = $false; why = 'clone detector - the dedupe-refactor skill uses it'
     cmd = 'npm install -g jscpd'
   }
+  @{ n = 'plannotator'; req = $false; why = 'plan review - the plannotator@plannotator Claude plugin calls it'
+    cmd = 'Install-Plannotator'
+  }
 )
+
+# Plannotator's own installer ignores -Minimal and adds skills and hooks to every
+# agent it finds, so fetch only the binary and check its published SHA-256.
+function Install-Plannotator {
+  $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
+  $asset = "plannotator-win32-$arch.exe"
+  $base = 'https://github.com/backnotprop/plannotator/releases/latest/download'
+  $dir = Join-Path $env:LOCALAPPDATA 'plannotator'
+  $tmp = Join-Path ([IO.Path]::GetTempPath()) $asset
+  try {
+    Invoke-WebRequest "$base/$asset" -OutFile $tmp -UseBasicParsing
+    $sum = Invoke-WebRequest "$base/$asset.sha256" -UseBasicParsing
+    $want = ([Text.Encoding]::ASCII.GetString($sum.RawContentStream.ToArray()) -split '\s+')[0].ToLower()
+    $got = (Get-FileHash $tmp -Algorithm SHA256).Hash.ToLower()
+    if ($got -ne $want) { throw "SHA-256 mismatch: got $got, release says $want" }
+    New-Item -ItemType Directory -Force $dir | Out-Null
+    Move-Item -Force $tmp (Join-Path $dir 'plannotator.exe')
+  }
+  catch {
+    Remove-Item $tmp -EA SilentlyContinue
+    Write-Warning "plannotator not installed: $_"
+    return
+  }
+  $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+  if (($userPath -split ';') -notcontains $dir) {
+    [Environment]::SetEnvironmentVariable('Path', "$userPath;$dir", 'User')
+  }
+}
 
 # A winget or uv install lands outside this process's PATH, so a re-check would
 # wrongly report failure without this.
