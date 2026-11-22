@@ -28,7 +28,7 @@ Move up a weight when the change turns out to touch lifecycle, concurrency or a 
 
 ## 1. Interview (Gate 1)
 - Restate the goal, scope and done-condition in two or three lines.
-- Read the code first (graphify when `graphify-out/` exists) and search shared memory.
+- Read the code first and search shared memory.
 - Ask only what changes the build. Batch the questions, each with a recommended default.
 - **Acceptance checks (Normal and Heavy).** Turn the worked examples into a table of scenario → pass condition.
   - Include at least one edge case.

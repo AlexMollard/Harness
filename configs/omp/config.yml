@@ -24,8 +24,6 @@ setupVersion: 3
 enabledModels: []
 skills:
   enableClaudeUser: true
-  ignoredSkills:
-    - graphify-windows
 commands:
   enableClaudeUser: true
 memory:

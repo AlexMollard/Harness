@@ -57,7 +57,7 @@ rather than a batch copy that drifts.
 | 3 | Hand over to `install.ps1` — config, skills, wiring, verify | Stops at the first failed gate |
 
 Nothing installs silently — every command is printed and needs a `y`. Where a tool is
-installed *by* another (omp by bun, graphify by uv), that one is offered first.
+installed *by* another (omp by bun), that one is offered first.
 
 | Tool | | Installed with |
 |---|---|---|
@@ -66,13 +66,11 @@ installed *by* another (omp by bun, graphify by uv), that one is offered first.
 | `node` (22+) | required | `winget install --id OpenJS.NodeJS.LTS -e` |
 | `omp` | optional | `bun install -g @oh-my-pi/pi-coding-agent` |
 | `rtk` | optional | `winget install rtk-ai.rtk` |
-| `graphify` | optional | `uv tool install graphifyy` |
 | `jscpd` | optional | `npm install -g jscpd` |
 
 > [!NOTE]
-> The PyPI package really is `graphifyy` — the plain name is being reclaimed upstream.
-> Run `graphify install` afterwards to finish its setup. winget builds of Claude Code
-> don't auto-update; set `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE=1` if you want that.
+> winget builds of Claude Code don't auto-update; set
+> `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE=1` if you want that.
 
 Anything replaced is kept beside the original as `<file>.pre-install`. Re-running is
 safe; every step is idempotent.
@@ -85,10 +83,10 @@ safe; every step is idempotent.
 
 | | |
 |---|---|
-| 📜 **Instructions** | 8 core entries, read by both harnesses |
+| 📜 **Instructions** | 7 core entries, read by both harnesses |
 | 🧠 **Skills** | 8 always indexed, 108 on demand |
 | ⌨️ **Commands** | 3 slash commands, shared |
-| 🪝 **Hooks** | Discovery and billing guards; optional Axiom hooks are installed separately |
+| 🪝 **Hooks** | Billing and line-ending guards; optional Axiom hooks are installed separately |
 | ⚙️ **Machine config** | Claude Code settings + hooks, omp config/models (roles belong to omp-maestro) |
 | 🔌 **MCP servers** | none, by measurement |
 
@@ -116,7 +114,6 @@ Loaded into every session on both harnesses, except the optional Axiom import.
 | `10-commit-style.md` | 17 | Imperative subject, no prefixes/emoji/attribution |
 | `20-principles.md` | 75 | Don't downgrade on time, done means it ran, ground in reality, leave the neighbourhood alone, skillify, delegate by default |
 | `30-gatekeeper.md` | 49 | The Interview gate and having a view before building; Ponytail governs the build |
-| `40-code-discovery.md` | 12 | Using `graphify` when a project has a graph |
 | `50-rtk.md` | 6 | RTK token-optimising CLI proxy |
 | `60-github-billing.md` | 19 | Zero GitHub spend — manual-dispatch workflows only, no metered storage |
 | `70-shared-memory.md` | 1 | Imports Axiom's contract when its standalone instructions exist |
@@ -170,7 +167,6 @@ with `/maestro <ensemble>` inside omp; `install.ps1` leaves roles alone.
 | Event | Hook | Fires when |
 |---|---|---|
 | `PreToolUse` Bash | `rtk hook claude` | always — routes commands through the RTK proxy |
-| `PreToolUse` Grep/Glob | `graphify-discovery-gate` | `graphify-out/graph.json` exists |
 | `PreToolUse` Write/Edit/Bash | `github-billing-gate` | **blocks** anything that would bill GitHub |
 | `PostToolUse` | telemetry | always |
 
@@ -208,7 +204,7 @@ A blocking hook that cries wolf is one you learn to disable.
 ## Skills
 
 <details>
-<summary><b>Always indexed (9)</b> — junctioned into both harnesses</summary>
+<summary><b>Always indexed (8)</b> — junctioned into both harnesses</summary>
 
 <br>
 
@@ -217,7 +213,6 @@ A blocking hook that cries wolf is one you learn to disable.
 | `skillify` | Turn something you just did into a reusable skill |
 | `check-resolvable` | Audit the skill library for DRY/MECE violations |
 | `skill-catalogue` | A task looks project-specific and nothing listed covers it |
-| `graphify` | Any question about a codebase's architecture |
 | `handoff` | Context is running low; capture what the next session needs |
 | `handoffplan` | Handoff, then a phased plan referencing it |
 | `pressure-test` | Test an approach against scalability, cost, efficiency |

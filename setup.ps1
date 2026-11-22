@@ -56,8 +56,7 @@ if ($WhatIf) { Write-Host (Hue "     dry run - nothing will be written" '33') }
 # --- 1. environment --------------------------------------------------------
 # Every command here was verified against a primary source, not recalled:
 # winget IDs against the live registry, Claude Code against code.claude.com/docs,
-# graphify against its own README (the PyPI package really is "graphifyy" - the
-# plain name is being reclaimed), omp against this machine's bun manifest.
+# and omp against this machine's bun manifest.
 $Tools = @(
   @{ n = 'git'; req = $true; why = 'version control'
     cmd = 'winget install --id Git.Git -e --accept-package-agreements --accept-source-agreements'
@@ -76,12 +75,6 @@ $Tools = @(
   }
   @{ n = 'rtk'; req = $false; why = 'token-optimising Bash proxy'
     cmd = 'winget install --id rtk-ai.rtk -e --accept-package-agreements --accept-source-agreements'
-  }
-  @{ n = 'graphify'; req = $false; why = 'code knowledge graph - core/40-code-discovery.md uses it'
-    needs = 'uv'
-    needsCmd = 'winget install --id astral-sh.uv -e --accept-package-agreements --accept-source-agreements'
-    cmd = 'uv tool install graphifyy'
-    note = 'run "graphify install" afterwards to finish setup'
   }
   @{ n = 'jscpd'; req = $false; why = 'clone detector - the dedupe-refactor skill uses it'
     cmd = 'npm install -g jscpd'
@@ -117,7 +110,7 @@ foreach ($t in $Tools) {
 
   if ($t.req) { No $t.n $t.why } else { Opt $t.n $t.why }
 
-  # Bootstrap whatever installs it (bun for omp, uv for graphify) first.
+  # Bootstrap the installer dependency first.
   if ($t.needs -and -not (Get-Command $t.needs -EA SilentlyContinue)) {
     Say "$($t.n) is installed by $($t.needs), which is also missing."
     [void](Invoke-Offered $t.needs $t.needsCmd)

@@ -107,18 +107,10 @@ if (Test-Path $sj) {
   }
 }
 
-# Fixture, not a real repo: these must pass on any machine, not just where a
-# graphed project happens to live.
+# Keep hook verification isolated from real repositories.
 $fix = Join-Path ([System.IO.Path]::GetTempPath()) "agent-core-verify-$PID"
-New-Item -ItemType Directory -Force -Path "$fix/withgraph/graphify-out" | Out-Null
-New-Item -ItemType Directory -Force -Path "$fix/nograph" | Out-Null
-'{}' | Set-Content "$fix/withgraph/graphify-out/graph.json"
-$jf = ($fix -replace '\\', '/')
+New-Item -ItemType Directory -Force -Path $fix | Out-Null
 try {
-  if (Test-Path "$HOME/.claude/hooks/graphify-discovery-gate") {
-    if (-not (Test-Hook 'graphify gate speaks where a graph exists' 'graphify-discovery-gate' "{`"cwd`":`"$jf/withgraph`"}" 'speaks')) { $fail++ }
-    if (-not (Test-Hook 'graphify gate silent without one      ' 'graphify-discovery-gate' "{`"cwd`":`"$jf/nograph`"}" 'silent')) { $fail++ }
-  }
   # The billing gate BLOCKS rather than advises, so both directions matter: a
   # false negative bills the account, a false positive stops legitimate work.
   if (Test-Path "$HOME/.claude/hooks/github-billing-gate") {
