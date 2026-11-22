@@ -1,8 +1,4 @@
 {
-  "env": {
-    "ANTHROPIC_BASE_URL": "http://127.0.0.1:8787",
-    "ANTHROPIC_TARGET_API_URL": "https://api.anthropic.com"
-  },
   "model": "opus[1m]",
   "hooks": {
     "PreToolUse": [
@@ -33,11 +29,6 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/cbm-session-reminder"
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/headroom-startup",
-            "timeout": 65
           }
         ]
       },
@@ -47,11 +38,6 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/cbm-session-reminder"
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/headroom-startup",
-            "timeout": 65
           }
         ]
       },

@@ -72,10 +72,6 @@ SKY_CUA_NATIVE_PIPE = "1"
 SKY_CUA_NATIVE_PIPE_DIRECTORY = '\\.\pipe\codex-computer-use-784629eb-264d-442f-b504-e219069f2bcf'
 CODEX_CLI_PATH = 'C:\Users\alex.mollard\AppData\Local\OpenAI\Codex\bin\5dee10576ec7a5b8\codex.exe'
 
-[mcp_servers.headroom]
-command = "headroom"
-args = ["mcp", "serve"]
-
 
 [mcp_servers.mind]
 command = "C:\\Users\\alex.mollard\\.bun\\bin\\bun.exe"

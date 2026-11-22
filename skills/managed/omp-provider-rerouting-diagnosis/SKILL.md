@@ -23,19 +23,10 @@ source function names and the catalogue location against v18.2.11 (2026-09-24).
 
 ## The dead-port discriminator (proves which def serves a request)
 
-`omp -p` output and `--mode json` events never reveal the request URL, and proxy dashboards may not count passthrough routes (headroom's `/stats` never counted its `/v4` catch-all), so stats deltas prove nothing. One exception: for Anthropic requests to a plain-http URL, the debug log `~/.omp/logs/omp.<date>.<pid>.log` records `cowork transport bypassed` with the `url` (reason `not-https`). The reliable test:
+`omp -p` output and `--mode json` events never reveal the request URL, and proxy dashboards may not count passthrough routes, so stats deltas prove nothing. One exception: for Anthropic requests to a plain-http URL, the debug log `~/.omp/logs/omp.<date>.<pid>.log` records `cowork transport bypassed` with the `url` (reason `not-https`). The reliable test:
 
 1. Register the provider/model with `baseUrl: "http://127.0.0.1:9"` (dead port).
 2. Run the real request WITHOUT `--no-extensions`.
 3. **Reply succeeds** → built-in def won (same-id bypass proven). **Connection error** → extension def served (your rerouting is live).
 4. Differential variant: register an extension-ONLY id (not in built-in catalog); if it resolves and reaches the dead port, extensions definitely load on the inference path (`-p` print mode DOES load user extensions from `~/.omp/agent/extensions/`).
 5. On HTTP 400 responses omp dumps the full request (URL, headers, body) to `~/.omp/logs/http-400-requests/<ts>-*.json` — URL-level evidence that also works for https targets. Point baseUrl at the real proxy but send a bogus model id to force a 400 and read the URL.
-
-## Case study (historical): routing built-in `zai/glm-5.3-flash` through headroom (2026-09-10)
-
-Headroom was removed from this machine on 2026-09-23 and nothing starts it. This
-is kept for the rerouting lessons, not as a setup to restore.
-
-- Goal: keep the id `zai/glm-5.3-flash` but change its URL → **impossible on v18.1.16** (same-id precedence). Working alternative: a custom `zai-headroom` provider in models.yml + modelRoles.
-- Keep only real model fields; keep compat verbatim (above).
-- headroom `/stats` (`requests.by_model`, `request_logs`, `recent_requests`, `persistent_savings`) counts only pipeline-processed traffic (gemini/anthropic pipelines), never `/v4` passthrough — never use it to prove /v4 routing.

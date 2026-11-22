@@ -365,10 +365,7 @@ repo generalises that pattern.
 
 Codex, opencode and Hermes were supported and removed (2026-09-16). Hermes came back
 on 2026-11-20 as a fresh setup on the OpenAI plan: an always-on gateway and cron
-harness that shares this repo's rules, skills and Axiom memory. A local headroom
-proxy fronted all traffic until 2026-09-21, when it was removed after measuring ~2% token
-savings — which did not justify pinning `ANTHROPIC_BASE_URL` at a port a fresh machine
-would have nothing listening on. Adapters and configs for all of them remain in git
-history.
+harness that shares this repo's rules, skills and Axiom memory. Adapters and configs
+for all of them remain in git history.
 
 </details>
