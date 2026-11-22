@@ -1,6 +1,6 @@
 #requires -Version 7
 <#
-  Repo -> machine. Sets up Claude Code and omp on a fresh PC from this repo.
+  Repo -> machine. Sets up Claude Code, omp and Hermes on a fresh PC from this repo.
 
     git clone https://github.com/AlexMollard/Harness.git ~/agent-core
     cd ~/agent-core; ./install.ps1 -WhatIf     # see what it would do
@@ -110,6 +110,7 @@ Step "1. prerequisites"
 foreach ($t in @(
     @{ n = 'claude'; req = $true; why = 'Claude Code CLI' }
     @{ n = 'omp'; req = $false; why = 'omp harness' }
+    @{ n = 'hermes'; req = $false; why = 'Hermes harness: iex (irm https://hermes-agent.nousresearch.com/install.ps1)' }
     @{ n = 'git'; req = $true; why = 'version control' }
     @{ n = 'node'; req = $false; why = 'optional Axiom integration requires Node.js 22+' }
     @{ n = 'rtk'; req = $false; why = 'Bash PreToolUse hook' }
@@ -182,6 +183,26 @@ else {
     if (Test-Path $dst) { Move-Item $dst "$dst.pre-install" -Force }
     Copy-Item $src $dst -Recurse -Force
     Ok "$((Get-ChildItem $dst -Directory).Count) skills -> ~/.omp/agent/managed-skills"
+  }
+}
+
+# --- 5b. Hermes settings ---------------------------------------------------
+Step "5b. Hermes settings"
+if (-not (Get-Command hermes -EA SilentlyContinue)) { Write-Host "  skipped: hermes not on PATH" -ForegroundColor DarkGray }
+else {
+  # Hermes owns config.yaml (and migrates it); agent-core owns only these keys.
+  $home_ = $HOME.Replace('\', '/')
+  $sets = Get-Content (Join-Path $Cfg 'hermes/settings.yaml') |
+  Where-Object { $_ -match '^([A-Za-z0-9_.]+):\s+(.+)$' } |
+  ForEach-Object { [pscustomobject]@{ Key = $Matches[1]; Value = $Matches[2].Replace('__HOME__', $home_) } }
+  foreach ($s in $sets) {
+    if ($WhatIf) { Write-Host "  would set $($s.Key)" -ForegroundColor Yellow; continue }
+    hermes config set $s.Key $s.Value | Out-Null
+    if ($LASTEXITCODE -ne 0) { Bad "hermes config set $($s.Key) failed" } else { Ok $s.Key }
+  }
+  if (-not $WhatIf) {
+    Write-Host "  shell hooks need one-time consent: run 'hermes hooks doctor' and approve if listed" -ForegroundColor DarkGray
+    if (-not (hermes auth list 2>$null | Select-String 'openai-codex')) { Warn "not signed in: run 'hermes auth add openai-codex'" }
   }
 }
 

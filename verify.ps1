@@ -12,7 +12,7 @@
 [CmdletBinding()]
 param(
   [switch]$Static,
-  [ValidateSet('claude', 'omp')]
+  [ValidateSet('claude', 'omp', 'hermes')]
   [string[]]$Only
 )
 
@@ -21,13 +21,15 @@ $Root = $PSScriptRoot
 $fail = 0
 
 # Three facts, one per core file, that exist nowhere else on this machine.
+# Phrased as a question about the rules, not a request to quote "system instructions":
+# GPT models (omp, Hermes) refuse the latter as prompt disclosure and answer MISSING.
 $Probe = @'
-Answer from your system instructions ONLY. Do not use any tools. Print exactly
-three lines and nothing else:
-1) the name of Gate 1
-2) the heading of the section about delegating to subagents
-3) what RTK stands for
-Print MISSING on any line whose answer is not in your instructions.
+Quick check of the working rules you follow, no tools needed. Reply with exactly
+three short lines and nothing else:
+1) the name of Gate 1 in your gatekeeper rules
+2) the title of your rule section about delegating to subagents
+3) what the acronym RTK stands for in your rules
+Write MISSING for any you do not know.
 '@
 
 $Expect = @('Interview', 'Delegate by Default', 'Rust Token Killer')
@@ -79,12 +81,20 @@ function Test-Live {
   return $true
 }
 
-$targets = if ($Only) { $Only } else { @('claude', 'omp') }
+$targets = if ($Only) { $Only } else { @('claude', 'omp', 'hermes') }
+$hermesSoul = Join-Path $(if ($env:HERMES_HOME) { $env:HERMES_HOME } else { Join-Path "$env:LOCALAPPDATA" 'hermes' }) 'SOUL.md'
 Write-Host "agent-core verify" -ForegroundColor Cyan
 
 Write-Host "static wiring:"
 if ('claude'   -in $targets) { if (-not (Test-Static 'claude  ' "$HOME/.claude/CLAUDE.md"                  'agent-core/core')) { $fail++ } }
 if ('omp'      -in $targets) { if (-not (Test-Static 'omp     ' "$HOME/.omp/agent/AGENTS.md"               'agent-core/core')) { $fail++ } }
+if ('hermes'   -in $targets) {
+  if (-not (Test-Static 'hermes  ' $hermesSoul 'Harness dialect: Hermes Agent')) { $fail++ }
+  # SOUL.md is the one generated copy, so check it against a fresh build.
+  elseif (-not ((& (Join-Path $Root 'build.ps1') -WhatIf -Only hermes 6>&1 | Out-String) -match '\(unchanged\)')) {
+    Write-Host "  FAIL hermes   - SOUL.md drifted from agent-core; run build.ps1" -ForegroundColor Red; $fail++
+  }
+}
 
 Write-Host "hooks:"
 # NOT `Get-Command bash` - on Windows that resolves to WSL bash, which mounts the
@@ -127,6 +137,19 @@ try {
     if (-not (Test-Hook 'billing gate blocks metered storage  ' 'github-billing-gate' $lfs 'speaks')) { $fail++ }
     if (-not (Test-Hook 'billing gate ignores ordinary work   ' 'github-billing-gate' '{"tool_name":"Bash","tool_input":{"command":"git status"}}' 'silent')) { $fail++ }
   }
+  # Hermes reaches the same gate through the bridge, with its own tool names.
+  if ('hermes' -in $targets) {
+    $bridge = Join-Path $Root 'configs/hermes/hooks/claude-hooks-bridge.mjs'
+    $hp = @{ hook_event_name = 'pre_tool_call'; tool_name = 'terminal'; tool_input = @{ command = ('git' + ' lfs track x') } } | ConvertTo-Json -Compress -Depth 5
+    $out = ($hp | node $bridge 2>$null | Out-String)
+    if ($out -match '"decision":"block"') { Write-Host "  ok   hermes bridge blocks metered storage" -ForegroundColor Green }
+    else { Write-Host "  FAIL hermes bridge did not block git lfs" -ForegroundColor Red; $fail++ }
+    # Hermes re-asks consent when the bridge changes (e.g. after a pull); until then it may not fire.
+    if (Get-Command hermes -EA SilentlyContinue) {
+      if ((hermes hooks doctor 2>&1 | Out-String) -match 'All shell hooks look healthy') { Write-Host "  ok   hermes hooks approved and unchanged" -ForegroundColor Green }
+      else { Write-Host "  FAIL hermes hooks need re-approval: hermes hooks doctor" -ForegroundColor Red; $fail++ }
+    }
+  }
 }
 finally { Remove-Item $fix -Recurse -Force -EA SilentlyContinue }
 
@@ -134,6 +157,7 @@ if (-not $Static) {
   Write-Host "live load (calls each harness once):"
   if ('claude' -in $targets) { if (-not (Test-Live 'claude  ' { claude -p --model haiku $Probe })) { $fail++ } }
   if ('omp'    -in $targets) { if (-not (Test-Live 'omp     ' { omp -p $Probe })) { $fail++ } }
+  if ('hermes' -in $targets) { if (-not (Test-Live 'hermes  ' { hermes -z $Probe })) { $fail++ } }
 }
 
 if ($fail) { Write-Host "$fail check(s) failed" -ForegroundColor Red; exit 1 }

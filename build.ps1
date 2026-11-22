@@ -5,13 +5,14 @@
   Claude Code and omp resolve `@~/path` imports natively (verified), so they get
   a thin stub that imports core/ directly - no generated copy to drift.
 
-  Every harness therefore reads core/ directly. Nothing is generated, so there is
-  no copy that can drift.
+  Hermes has no import syntax and reads SOUL.md only from HERMES_HOME, so it is the
+  one generated copy: the same stub with every `@~/` line inlined. verify.ps1 fails
+  when that copy drifts from a fresh build.
 #>
 [CmdletBinding()]
 param(
   [switch]$WhatIf,
-  [ValidateSet('claude', 'omp')]
+  [ValidateSet('claude', 'omp', 'hermes')]
   [string[]]$Only
 )
 
@@ -56,6 +57,26 @@ function Get-Stub {
   ($lines -join "`n")
 }
 
+function Get-HermesSoulPath {
+  $hermesHome = if ($env:HERMES_HOME) { $env:HERMES_HOME } else { Join-Path $env:LOCALAPPDATA 'hermes' }
+  Join-Path $hermesHome 'SOUL.md'
+}
+
+# Inline `@~/path` lines recursively (70-shared-memory is itself an import).
+function Expand-Imports {
+  param([string]$Text, [int]$Depth = 0)
+  if ($Depth -gt 5) { throw 'Import nesting deeper than 5 - is there a cycle?' }
+  $out = foreach ($line in ($Text -split "`r?`n")) {
+    if ($line -match '^@~/(\S+)$') {
+      $path = Join-Path $Home_ $Matches[1]
+      if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Import not found: $line" }
+      (Expand-Imports (Get-Content -Raw -LiteralPath $path) ($Depth + 1)).TrimEnd()
+    }
+    else { $line }
+  }
+  ($out -join "`n")
+}
+
 Write-Host "agent-core build" -ForegroundColor Cyan
 
 if ('claude' -in $targets) {
@@ -66,6 +87,11 @@ if ('claude' -in $targets) {
 if ('omp' -in $targets) {
   Write-Host "omp     -> import stub"
   Write-Target (Join-Path $Home_ '.omp/agent/AGENTS.md') (Get-Stub 'omp')
+}
+
+if ('hermes' -in $targets) {
+  Write-Host "hermes  -> inlined SOUL.md"
+  Write-Target (Get-HermesSoulPath) (Expand-Imports (Get-Stub 'hermes'))
 }
 
 

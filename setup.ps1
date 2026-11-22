@@ -73,6 +73,10 @@ $Tools = @(
     needsCmd = 'winget install --id Oven-sh.Bun -e --accept-package-agreements --accept-source-agreements'
     cmd = 'bun install -g @oh-my-pi/pi-coding-agent'
   }
+  @{ n = 'hermes'; req = $false; why = 'always-on harness (gateway, cron) on the OpenAI plan'
+    cmd = 'pwsh -NoProfile -Command "iex (irm https://hermes-agent.nousresearch.com/install.ps1)"'
+    note = 'then: hermes auth add openai-codex'
+  }
   @{ n = 'rtk'; req = $false; why = 'token-optimising Bash proxy'
     cmd = 'winget install --id rtk-ai.rtk -e --accept-package-agreements --accept-source-agreements'
   }

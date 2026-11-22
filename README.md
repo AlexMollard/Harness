@@ -5,7 +5,7 @@
 **One agent configuration. Two harnesses. Any machine.**
 
 Shared rules, skills, commands, hooks and settings for
-[Claude Code](https://claude.com/claude-code) and omp — version-controlled,
+[Claude Code](https://claude.com/claude-code), omp and Hermes — version-controlled,
 verifiable, and installable in one step.
 
 ![PowerShell 7+](https://img.shields.io/badge/PowerShell-7%2B-5391FE?logo=powershell&logoColor=white)
@@ -125,6 +125,16 @@ plugin, installed in both harnesses, owns that.
 `~/.claude/CLAUDE.md`, omp via the same stub in `~/.omp/agent/AGENTS.md`. Both resolve
 `@` imports natively, so **nothing is generated** and no copy can drift. Edit a file in
 `core/` and it takes effect at the next session start.
+
+Hermes is the exception: it has no import syntax and reads `SOUL.md` only from
+`%LOCALAPPDATA%\hermes`, so `build.ps1` writes that one file with every `@~/` line
+inlined, and `verify.ps1` fails when it drifts. Rerun `build.ps1` after editing `core/`.
+Its settings live in `configs/hermes/settings.yaml` (applied with `hermes config set`;
+Hermes keeps its own generated `config.yaml`). They flow repo → machine only:
+`export-config.ps1` does not capture Hermes, so add a key there to keep it. Its hooks reuse the Claude hooks through
+`configs/hermes/hooks/claude-hooks-bridge.mjs`. Hermes re-asks for consent when that
+script changes: run `hermes hooks doctor`, and if it reports drift, `hermes hooks revoke`
+and `hermes --accept-hooks` once.
 
 ### Optional Axiom integration
 
@@ -352,7 +362,9 @@ markdown and a dead `@RTK.md` import, and nothing was under version control. omp
 only harness doing it right — a thin dialect file that *imported* the shared body. This
 repo generalises that pattern.
 
-Codex, opencode and Hermes were supported and removed (2026-09-16). A local headroom
+Codex, opencode and Hermes were supported and removed (2026-09-16). Hermes came back
+on 2026-11-20 as a fresh setup on the OpenAI plan: an always-on gateway and cron
+harness that shares this repo's rules, skills and Axiom memory. A local headroom
 proxy fronted all traffic until 2026-09-21, when it was removed after measuring ~2% token
 savings — which did not justify pinning `ANTHROPIC_BASE_URL` at a port a fresh machine
 would have nothing listening on. Adapters and configs for all of them remain in git

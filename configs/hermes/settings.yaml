@@ -1,0 +1,41 @@
+# Hermes settings owned by agent-core, applied by install.ps1 with `hermes config set`.
+# Each key is a dotted config.yaml path; Hermes keeps its own generated config.yaml
+# (and migrates it on update), so only these overrides live in git. No secrets here:
+# the OpenAI plan login is `hermes auth add openai-codex`, Discord keys live in
+# %LOCALAPPDATA%\hermes\.env via `hermes gateway setup`.
+
+# Same ChatGPT plan omp uses. Main = newest Sol on the plan; side tasks = omp's smol model.
+model.provider: openai-codex
+model.default: gpt-6.2-sol
+auxiliary.approval.provider: openai-codex
+auxiliary.approval.model: gpt-6-luna
+auxiliary.compression.provider: openai-codex
+auxiliary.compression.model: gpt-6-luna
+auxiliary.title_generation.provider: openai-codex
+auxiliary.title_generation.model: gpt-6-luna
+auxiliary.background_review.provider: openai-codex
+auxiliary.background_review.model: gpt-6-luna
+
+# Axiom is the one memory store across harnesses; Hermes' own stores stay off. Hermes
+# uses the axiom-memory CLI, not Axiom's MCP server: sessions run in a detached gateway,
+# so an MCP server is pinned to the gateway's directory and every project reads as unmapped.
+memory.memory_enabled: false
+memory.user_profile_enabled: false
+
+# Shared skill pool (git-tracked, also Claude's and omp's): every agent edit is staged for review.
+skills.external_dirs: ["~/agent-core/skills/global"]
+skills.write_approval: true
+
+# Commands run natively on Windows with no sandbox.
+approvals.mode: smart
+approvals.cron_mode: deny
+approvals.unattended_mode: deny
+approvals.deny: ["*git push --force*", "*git push -f *", "*gh workflow enable*", "*gh workflow run*", "*git lfs *", "*gh codespace create*"]
+
+# Billing gate, CRLF and RTK: the Claude Code hooks, run through one bridge.
+# __HOME__ is filled in by install.ps1: Hermes only expands a leading ~, and node never does.
+hooks.pre_tool_call: [{matcher: "terminal|write_file|patch", command: "node __HOME__/agent-core/configs/hermes/hooks/claude-hooks-bridge.mjs", timeout: 20}]
+hooks.post_tool_call: [{matcher: "write_file", command: "node __HOME__/agent-core/configs/hermes/hooks/claude-hooks-bridge.mjs", timeout: 10}]
+
+# Discord: DMs only from allow-listed users (DISCORD_ALLOWED_USERS in .env).
+discord.require_mention: true
