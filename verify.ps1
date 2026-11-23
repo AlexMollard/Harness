@@ -12,12 +12,13 @@
 [CmdletBinding()]
 param(
   [switch]$Static,
-  [ValidateSet('claude', 'omp', 'hermes')]
+  [ValidateSet('claude', 'omp', 'hermes', 'codex')]
   [string[]]$Only
 )
 
 $ErrorActionPreference = 'Continue'
 $Root = $PSScriptRoot
+. (Join-Path $Root 'tools/harness-commands.ps1')
 $fail = 0
 
 # Three facts, one per core file, that exist nowhere else on this machine.
@@ -70,10 +71,13 @@ function Test-Hook {
 function Test-Live {
   param([string]$Name, [scriptblock]$Run)
   Write-Host "  .... $Name probing" -NoNewline
-  try { $out = (& $Run) 2>&1 | Out-String } catch { $out = "$_" }
+  $global:LASTEXITCODE = 0
+  $failed = $false
+  try { $out = (& $Run) 2>&1 | Out-String; $failed = $LASTEXITCODE -ne 0 } catch { $out = "$_"; $failed = $true }
   $missed = $Expect | Where-Object { $out -notmatch [regex]::Escape($_) }
-  if ($missed) {
-    Write-Host "`r  FAIL $Name - did not load: $($missed -join ', ')   " -ForegroundColor Red
+  if ($failed -or $missed) {
+    $reason = if ($failed) { 'CLI invocation failed' } else { "did not load: $($missed -join ', ')" }
+    Write-Host "`r  FAIL $Name - $reason   " -ForegroundColor Red
     Write-Host ($out.Trim() -split "`n" | Select-Object -Last 6 | ForEach-Object { "         $_" }) -ForegroundColor DarkGray
     return $false
   }
@@ -81,7 +85,7 @@ function Test-Live {
   return $true
 }
 
-$targets = if ($Only) { $Only } else { @('claude', 'omp', 'hermes') }
+$targets = if ($Only) { $Only } else { @('claude', 'omp', 'hermes', 'codex') }
 $hermesSoul = Join-Path $(if ($env:HERMES_HOME) { $env:HERMES_HOME } else { Join-Path "$env:LOCALAPPDATA" 'hermes' }) 'SOUL.md'
 Write-Host "agent-core verify" -ForegroundColor Cyan
 
@@ -93,6 +97,29 @@ if ('hermes'   -in $targets) {
   # SOUL.md is the one generated copy, so check it against a fresh build.
   elseif (-not ((& (Join-Path $Root 'build.ps1') -WhatIf -Only hermes 6>&1 | Out-String) -match '\(unchanged\)')) {
     Write-Host "  FAIL hermes   - SOUL.md drifted from agent-core; run build.ps1" -ForegroundColor Red; $fail++
+  }
+}
+
+if ('codex' -in $targets) {
+  $codexDir = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME '.codex' }
+  $codexPath = Join-Path $codexDir 'AGENTS.md'
+  $override = Join-Path $codexDir 'AGENTS.override.md'
+  if ((Test-Path -LiteralPath $override -PathType Leaf) -and
+      -not [string]::IsNullOrWhiteSpace((Get-Content -Raw -LiteralPath $override))) { $codexPath = $override }
+  if (-not (Test-Static 'codex   ' $codexPath 'Harness dialect: Codex')) { $fail++ }
+  else {
+    try {
+      $preview = & (Join-Path $Root 'build.ps1') -WhatIf -Only codex 6>&1 | Out-String
+      if ($preview -notmatch '\(unchanged\)') { throw 'managed instructions drifted; run build.ps1 -Only codex' }
+      Write-Host '  ok   codex managed instructions match agent-core' -ForegroundColor Green
+    }
+    catch { Write-Host "  FAIL codex - $_" -ForegroundColor Red; $fail++ }
+  }
+  foreach ($skill in (Get-ChildItem (Join-Path $Root 'skills/global') -Directory | Where-Object { $_.Name -ne '.system' -and (Test-Path -LiteralPath (Join-Path $_.FullName 'SKILL.md')) })) {
+    if (Test-Path -LiteralPath (Join-Path $HOME ".agents/skills/$($skill.Name)/SKILL.md")) {
+      Write-Host "  ok   codex skill $($skill.Name) available" -ForegroundColor Green
+    }
+    else { Write-Host "  FAIL codex skill $($skill.Name) missing; run sync-skills.ps1 -Link" -ForegroundColor Red; $fail++ }
   }
 }
 
@@ -145,8 +172,9 @@ try {
     if ($out -match '"decision":"block"') { Write-Host "  ok   hermes bridge blocks metered storage" -ForegroundColor Green }
     else { Write-Host "  FAIL hermes bridge did not block git lfs" -ForegroundColor Red; $fail++ }
     # Hermes re-asks consent when the bridge changes (e.g. after a pull); until then it may not fire.
-    if (Get-Command hermes -EA SilentlyContinue) {
-      if ((hermes hooks doctor 2>&1 | Out-String) -match 'All shell hooks look healthy') { Write-Host "  ok   hermes hooks approved and unchanged" -ForegroundColor Green }
+    $hermesCommand = Resolve-HarnessCommand hermes
+    if ($hermesCommand) {
+      if ((& $hermesCommand hooks doctor 2>&1 | Out-String) -match 'All shell hooks look healthy') { Write-Host "  ok   hermes hooks approved and unchanged" -ForegroundColor Green }
       else { Write-Host "  FAIL hermes hooks need re-approval: hermes hooks doctor" -ForegroundColor Red; $fail++ }
     }
   }
@@ -155,9 +183,10 @@ finally { Remove-Item $fix -Recurse -Force -EA SilentlyContinue }
 
 if (-not $Static) {
   Write-Host "live load (calls each harness once):"
-  if ('claude' -in $targets) { if (-not (Test-Live 'claude  ' { claude -p --model haiku $Probe })) { $fail++ } }
+  if ('claude' -in $targets) { if (-not (Test-Live 'claude  ' { & (Resolve-HarnessCommand claude) -p --model haiku --tools '' --strict-mcp-config --mcp-config '{"mcpServers":{}}' --no-session-persistence $Probe })) { $fail++ } }
   if ('omp'    -in $targets) { if (-not (Test-Live 'omp     ' { omp -p $Probe })) { $fail++ } }
-  if ('hermes' -in $targets) { if (-not (Test-Live 'hermes  ' { hermes -z $Probe })) { $fail++ } }
+  if ('hermes' -in $targets) { if (-not (Test-Live 'hermes  ' { & (Resolve-HarnessCommand hermes) -z $Probe })) { $fail++ } }
+  if ('codex' -in $targets) { if (-not (Test-Live 'codex   ' { & (Resolve-HarnessCommand codex) exec --ignore-user-config --ephemeral --sandbox read-only --skip-git-repo-check $Probe })) { $fail++ } }
 }
 
 if ($fail) { Write-Host "$fail check(s) failed" -ForegroundColor Red; exit 1 }

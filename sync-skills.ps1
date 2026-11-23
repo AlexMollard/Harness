@@ -75,6 +75,16 @@ if ($Unlink) {
       Write-Host "  unlinked $($l.Label), copied pool contents into a real dir" -ForegroundColor Green
     }
   }
+  # Undo only junctions this script owns, never same-name user skill directories.
+  foreach ($skill in (Get-ChildItem -LiteralPath $Pool -Directory)) {
+    $dest = Join-Path $HOME ".agents/skills/$($skill.Name)"
+    $item = Get-Item -LiteralPath $dest -Force -EA SilentlyContinue
+    if (-not ($item -and $item.LinkType -eq 'Junction' -and $item.Target.Count)) { continue }
+    if ([IO.Path]::GetFullPath(@($item.Target)[0]) -ne [IO.Path]::GetFullPath($skill.FullName)) { continue }
+    if ($WhatIf) { Write-Host "  would unlink codex skill $($skill.Name)" -ForegroundColor Yellow; continue }
+    [IO.Directory]::Delete($dest, $false)
+    Write-Host "  unlinked codex skill $($skill.Name)" -ForegroundColor Green
+  }
   return
 }
 
@@ -222,6 +232,19 @@ foreach ($l in $Links) {
   New-Item -ItemType Junction -Path $d -Target $l.Pool | Out-Null
   $note = if ($redundant) { 'was identical, nothing to keep' } else { "previous set kept at $(Split-Path -Leaf $bak)" }
   Write-Host "  + $($l.Label) -> pool ($note)" -ForegroundColor Green
+}
+
+# Codex's user skill root may already contain unrelated skills. Link each shared
+# skill separately; never replace that root or an existing user-owned skill.
+$codexSkills = Join-Path $HOME '.agents/skills'
+foreach ($skill in (Get-ChildItem -LiteralPath $Pool -Directory | Where-Object { $_.Name -ne '.system' -and (Test-Path -LiteralPath (Join-Path $_.FullName 'SKILL.md')) })) {
+  $dest = Join-Path $codexSkills $skill.Name
+  $existing = Get-Item -LiteralPath $dest -Force -EA SilentlyContinue
+  if ($existing) { Write-Host "  = codex skill $($skill.Name) already present (preserved)" -ForegroundColor DarkGray; continue }
+  if ($WhatIf) { Write-Host "  would link codex skill $($skill.Name)" -ForegroundColor Yellow; continue }
+  New-Item -ItemType Directory -Force -Path $codexSkills | Out-Null
+  New-Item -ItemType Junction -Path $dest -Target $skill.FullName | Out-Null
+  Write-Host "  + codex skill $($skill.Name) -> pool" -ForegroundColor Green
 }
 
 Write-Host "done." -ForegroundColor Cyan

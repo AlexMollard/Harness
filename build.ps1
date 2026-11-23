@@ -5,14 +5,14 @@
   Claude Code and omp resolve `@~/path` imports natively (verified), so they get
   a thin stub that imports core/ directly - no generated copy to drift.
 
-  Hermes has no import syntax and reads SOUL.md only from HERMES_HOME, so it is the
-  one generated copy: the same stub with every `@~/` line inlined. verify.ps1 fails
-  when that copy drifts from a fresh build.
+  Hermes reads an inlined SOUL.md. Codex receives the same shared rules in a
+  managed section of its effective global instructions. verify.ps1 detects drift
+  in both generated copies. Existing Codex instructions outside the section stay.
 #>
 [CmdletBinding()]
 param(
   [switch]$WhatIf,
-  [ValidateSet('claude', 'omp', 'hermes')]
+  [ValidateSet('claude', 'omp', 'hermes', 'codex')]
   [string[]]$Only
 )
 
@@ -62,6 +62,37 @@ function Get-HermesSoulPath {
   Join-Path $hermesHome 'SOUL.md'
 }
 
+function Get-CodexInstructionsPath {
+  $codexDir = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $Home_ '.codex' }
+  $override = Join-Path $codexDir 'AGENTS.override.md'
+  if ((Test-Path -LiteralPath $override -PathType Leaf) -and
+      -not [string]::IsNullOrWhiteSpace((Get-Content -Raw -LiteralPath $override))) { return $override }
+  Join-Path $codexDir 'AGENTS.md'
+}
+
+function Write-CodexInstructions {
+  $path = Get-CodexInstructionsPath
+  $old = if (Test-Path -LiteralPath $path) { Get-Content -Raw -LiteralPath $path } else { '' }
+  $start = '<!-- agent-core:codex:start -->'
+  $end = '<!-- agent-core:codex:end -->'
+  $pattern = '(?s)' + [regex]::Escape($start) + '.*?' + [regex]::Escape($end)
+  $starts = [regex]::Matches($old, [regex]::Escape($start)).Count
+  $ends = [regex]::Matches($old, [regex]::Escape($end)).Count
+  if ($starts -gt 1 -or $ends -gt 1 -or $starts -ne $ends -or
+      ($starts -eq 1 -and -not [regex]::IsMatch($old, $pattern))) {
+    throw "Malformed agent-core Codex markers in $path; refusing to overwrite user instructions."
+  }
+  $body = Expand-Imports (Get-Stub 'codex')
+  $block = "$start`n$body`n$end"
+  $text = if ($starts) { [regex]::Replace($old, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $block }) }
+          elseif ($old) { $old.TrimEnd("`r", "`n") + "`n`n" + $block + "`n" }
+          else { $block + "`n" }
+  if (-not $WhatIf -and (Test-Path -LiteralPath $path) -and -not (Test-Path -LiteralPath "$path.pre-install")) {
+    Copy-Item -LiteralPath $path -Destination "$path.pre-install"
+  }
+  Write-Target $path $text
+}
+
 # Inline `@~/path` lines recursively (70-shared-memory is itself an import).
 function Expand-Imports {
   param([string]$Text, [int]$Depth = 0)
@@ -92,6 +123,11 @@ if ('omp' -in $targets) {
 if ('hermes' -in $targets) {
   Write-Host "hermes  -> inlined SOUL.md"
   Write-Target (Get-HermesSoulPath) (Expand-Imports (Get-Stub 'hermes'))
+}
+
+if ('codex' -in $targets) {
+  Write-Host "codex   -> inlined managed instructions"
+  Write-CodexInstructions
 }
 
 

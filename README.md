@@ -2,10 +2,10 @@
 
 # Harness
 
-**One agent configuration. Two harnesses. Any machine.**
+**One agent configuration. Four harnesses. Any machine.**
 
 Shared rules, skills, commands, hooks and settings for
-[Claude Code](https://claude.com/claude-code), omp and Hermes — version-controlled,
+[Claude Code](https://claude.com/claude-code), omp, Hermes and Codex — version-controlled,
 verifiable, and installable in one step.
 
 ![PowerShell 7+](https://img.shields.io/badge/PowerShell-7%2B-5391FE?logo=powershell&logoColor=white)
@@ -124,10 +124,10 @@ plugin, installed in both harnesses, owns that.
 
 **How each harness reads it** — Claude Code via `@~/agent-core/...` in
 `~/.claude/CLAUDE.md`, omp via the same stub in `~/.omp/agent/AGENTS.md`. Both resolve
-`@` imports natively, so **nothing is generated** and no copy can drift. Edit a file in
+`@` imports natively, so those two have no generated rule copies to drift. Edit a file in
 `core/` and it takes effect at the next session start.
 
-Hermes is the exception: it has no import syntax and reads `SOUL.md` only from
+Hermes has no import syntax and reads `SOUL.md` only from
 `%LOCALAPPDATA%\hermes`, so `build.ps1` writes that one file with every `@~/` line
 inlined, and `verify.ps1` fails when it drifts. Rerun `build.ps1` after editing `core/`.
 Its settings live in `configs/hermes/settings.yaml` (applied with `hermes config set`;
@@ -306,6 +306,31 @@ username on the next machine doesn't break anything.
 ---
 
 ## Verification
+
+### Codex
+
+`install.ps1` also configures Codex. `build.ps1 -Only codex` inlines the shared
+rules in a managed section of the effective global instructions under `CODEX_HOME`
+(default `~/.codex`). A nonempty `AGENTS.override.md` takes priority over `AGENTS.md`.
+Existing instructions outside the markers are preserved, with an initial
+`.pre-install` backup. This uses Codex's global instruction discovery rather than
+depending on `@` imports. Rerun the build after editing the shared rules.
+
+`sync-skills.ps1 -Link` links missing shared skills individually into
+`~/.agents/skills`; existing skill directories and Codex's system skills are
+preserved. Existing same-name user skills take precedence. Codex configuration,
+credentials, plugins and MCP servers are left intact. The Claude/Hermes shell hooks
+are not installed as Codex hooks, so the billing rules are instructions in Codex.
+
+`verify.ps1 -Static` checks generated instructions for drift and verifies shared
+skill availability. `verify.ps1 -Only codex` additionally makes a read-only,
+ephemeral CLI call to check the rules loaded. Open a new Codex chat after updating.
+Run `tests/codex-support.ps1` for isolated preservation and repeatability checks.
+
+References: [global instructions](https://developers.openai.com/codex/guides/agents-md)
+and [skills](https://developers.openai.com/codex/skills).
+
+### All harnesses
 
 ```powershell
 .\verify.ps1            # everything, including a live call to each harness

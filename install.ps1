@@ -1,6 +1,6 @@
 #requires -Version 7
 <#
-  Repo -> machine. Sets up Claude Code, omp and Hermes on a fresh PC from this repo.
+  Repo -> machine. Sets up Claude Code, omp, Hermes and Codex from this repo.
 
     git clone https://github.com/AlexMollard/Harness.git ~/agent-core
     cd ~/agent-core; ./install.ps1 -WhatIf     # see what it would do
@@ -22,6 +22,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $Root = $PSScriptRoot
+. (Join-Path $Root 'tools/harness-commands.ps1')
 $Cfg = Join-Path $Root 'configs'
 $problems = @()
 
@@ -111,11 +112,13 @@ foreach ($t in @(
     @{ n = 'claude'; req = $true; why = 'Claude Code CLI' }
     @{ n = 'omp'; req = $false; why = 'omp harness' }
     @{ n = 'hermes'; req = $false; why = 'Hermes harness: iex (irm https://hermes-agent.nousresearch.com/install.ps1)' }
+    @{ n = 'codex'; req = $false; why = 'Codex CLI (or the Codex desktop bundled CLI)' }
     @{ n = 'git'; req = $true; why = 'version control' }
     @{ n = 'node'; req = $false; why = 'optional Axiom integration requires Node.js 22+' }
     @{ n = 'rtk'; req = $false; why = 'Bash PreToolUse hook' }
   )) {
-  if (Get-Command $t.n -EA SilentlyContinue) { Ok "$($t.n) found" }
+  $installed = if ($t.n -in @('claude','omp','hermes','codex')) { Resolve-HarnessCommand $t.n } else { (Get-Command $t.n -EA SilentlyContinue).Source }
+  if ($installed) { Ok "$($t.n) found ($installed)" }
   elseif ($t.req) { Bad "$($t.n) not on PATH - $($t.why)" }
   else { Warn "$($t.n) not on PATH - $($t.why)" }
 }
@@ -188,7 +191,8 @@ else {
 
 # --- 5b. Hermes settings ---------------------------------------------------
 Step "5b. Hermes settings"
-if (-not (Get-Command hermes -EA SilentlyContinue)) { Write-Host "  skipped: hermes not on PATH" -ForegroundColor DarkGray }
+$hermesCommand = Resolve-HarnessCommand hermes
+if (-not $hermesCommand) { Write-Host "  skipped: hermes not installed" -ForegroundColor DarkGray }
 else {
   # Hermes owns config.yaml (and migrates it); agent-core owns only these keys.
   $home_ = $HOME.Replace('\', '/')
@@ -197,12 +201,12 @@ else {
   ForEach-Object { [pscustomobject]@{ Key = $Matches[1]; Value = $Matches[2].Replace('__HOME__', $home_) } }
   foreach ($s in $sets) {
     if ($WhatIf) { Write-Host "  would set $($s.Key)" -ForegroundColor Yellow; continue }
-    hermes config set $s.Key $s.Value | Out-Null
+    & $hermesCommand config set $s.Key $s.Value | Out-Null
     if ($LASTEXITCODE -ne 0) { Bad "hermes config set $($s.Key) failed" } else { Ok $s.Key }
   }
   if (-not $WhatIf) {
     Write-Host "  shell hooks need one-time consent: run 'hermes hooks doctor' and approve if listed" -ForegroundColor DarkGray
-    if (-not (hermes auth list 2>$null | Select-String 'openai-codex')) { Warn "not signed in: run 'hermes auth add openai-codex'" }
+    if (-not (& $hermesCommand auth list 2>$null | Select-String 'openai-codex')) { Warn "not signed in: run 'hermes auth add openai-codex'" }
   }
 }
 
@@ -240,6 +244,7 @@ else {
 Step "7. verify"
 if ($WhatIf) { Write-Host "  would run verify.ps1" -ForegroundColor Yellow; return }
 & (Join-Path $Root 'verify.ps1') -Static
+if ($LASTEXITCODE -ne 0) { throw 'Static verification failed; see the failed checks above.' }
 Write-Host "`nStatic wiring passed. Run ./verify.ps1 (no -Static) to prove each harness" -ForegroundColor Cyan
 Write-Host "actually loads the rules - it calls each one once." -ForegroundColor Cyan
 Write-Host "Anything replaced was kept alongside as <file>.pre-install." -ForegroundColor DarkGray

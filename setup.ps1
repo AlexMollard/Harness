@@ -20,6 +20,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $Root = $PSScriptRoot
+. (Join-Path $Root 'tools/harness-commands.ps1')
 $Cfg = Join-Path $Root 'configs'
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}
 
@@ -43,7 +44,7 @@ function Say { param([string]$t) Write-Host "       $(Hue $t '90')" }
 
 Write-Host ""
 $title = 'Harness'
-$sub = 'one agent configuration for Claude Code and omp'
+$sub = 'one agent configuration for Claude Code, omp, Hermes and Codex'
 $w = $title.Length + 2 + $sub.Length + 2      # "  " between, one pad each side
 Write-Host (Hue "  ┌$('─' * $w)┐" '36')
 Write-Host (Hue '  │ ' '36') -NoNewline
@@ -141,7 +142,8 @@ Head 1 'Environment'
 $missing = @()
 Ok "PowerShell $($PSVersionTable.PSVersion)"
 foreach ($t in $Tools) {
-  if (Get-Command $t.n -EA SilentlyContinue) { Ok $t.n; continue }
+  $installed = if ($t.n -in @('claude','omp','hermes','codex')) { Resolve-HarnessCommand $t.n } else { (Get-Command $t.n -EA SilentlyContinue).Source }
+  if ($installed) { Ok $t.n; continue }
 
   if ($t.req) { No $t.n $t.why } else { Opt $t.n $t.why }
 
@@ -157,7 +159,8 @@ foreach ($t in $Tools) {
   }
 
   [void](Invoke-Offered $t.n $t.cmd)
-  if (Get-Command $t.n -EA SilentlyContinue) {
+  $installed = if ($t.n -in @('claude','omp','hermes','codex')) { Resolve-HarnessCommand $t.n } else { (Get-Command $t.n -EA SilentlyContinue).Source }
+  if ($installed) {
     Ok $t.n 'installed'
     if ($t.note) { Say $t.note }
   }
