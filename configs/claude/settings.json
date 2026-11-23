@@ -1,11 +1,18 @@
 {
   "model": "opus",
   "permissions": {
-    "defaultMode": "auto"
+    "defaultMode": "auto",
+    "deny": ["PowerShell", "ScheduleWakeup"]
   },
   "skillOverrides": {
-    "handoff": "off",
-    "handoffplan": "off"
+    "docs": "off",
+    "docx": "off",
+    "google-workspace": "off",
+    "import-memory": "off",
+    "morning": "off",
+    "pdf": "off",
+    "pptx": "off",
+    "xlsx": "off"
   },
   "env": {
     "PONYTAIL_MAP": "0",
@@ -61,7 +68,7 @@
   },
   "enableWorkflows": true,
   "enabledPlugins": {
-    "superpowers@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": false,
     "clangd-lsp@claude-plugins-official": true,
     "ponytail@ponytail": true,
     "plannotator@plannotator": true

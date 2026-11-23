@@ -35,8 +35,6 @@ $Managed = "$HOME/.omp/agent/managed-skills"
 # General-purpose skills: useful in any repo, cheap to index everywhere.
 $GlobalSkills = @{
   'check-resolvable' = "$HOME/.claude/skills/check-resolvable"
-  'handoff'          = "$HOME/.claude/skills/handoff"
-  'handoffplan'      = "$HOME/.claude/skills/handoffplan"
   'skillify'         = "$HOME/.claude/skills/skillify"
   'pressure-test'    = "$Root/skills/global/pressure-test"
   'sidenote'         = "$Root/skills/global/sidenote"

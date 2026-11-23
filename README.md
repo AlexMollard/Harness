@@ -224,8 +224,6 @@ A blocking hook that cries wolf is one you learn to disable.
 | `skillify` | Turn something you just did into a reusable skill |
 | `check-resolvable` | Audit the skill library for DRY/MECE violations |
 | `skill-catalogue` | A task looks project-specific and nothing listed covers it |
-| `handoff` | Context is running low; capture what the next session needs |
-| `handoffplan` | Handoff, then a phased plan referencing it |
 | `pressure-test` | Test an approach against scalability, cost, efficiency |
 | `sidenote` | Park a thought without derailing the current task |
 | `dedupe-refactor` | Find duplicated logic, plan a consolidation, apply approved clusters |
